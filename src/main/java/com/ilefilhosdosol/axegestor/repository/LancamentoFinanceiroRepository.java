@@ -30,4 +30,11 @@ public interface LancamentoFinanceiroRepository extends JpaRepository<Lancamento
     );
 
     List<LancamentoFinanceiro> findByMembroId(Long membroId);
+
+    List<LancamentoFinanceiro> findByMembroIdAndCategoriaAndDataLancamentoBetween(
+            Long membroId,
+            CategoriaFinanceira categoria,
+            LocalDate inicio,
+            LocalDate fim
+    );
 }

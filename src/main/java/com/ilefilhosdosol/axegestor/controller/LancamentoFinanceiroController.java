@@ -1,11 +1,14 @@
 package com.ilefilhosdosol.axegestor.controller;
 
+import com.ilefilhosdosol.axegestor.dto.ResumoMensalidadeMembroResponse;
 import com.ilefilhosdosol.axegestor.enums.CategoriaFinanceira;
 import com.ilefilhosdosol.axegestor.enums.StatusPagamento;
 import com.ilefilhosdosol.axegestor.enums.TipoLancamento;
 import com.ilefilhosdosol.axegestor.exception.NotFoundException;
 import com.ilefilhosdosol.axegestor.model.LancamentoFinanceiro;
+import com.ilefilhosdosol.axegestor.model.Membro;
 import com.ilefilhosdosol.axegestor.repository.LancamentoFinanceiroRepository;
+import com.ilefilhosdosol.axegestor.repository.MembroRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,9 +30,14 @@ import java.util.List;
 public class LancamentoFinanceiroController {
 
     private final LancamentoFinanceiroRepository repository;
+    private final MembroRepository membroRepository;
 
-    public LancamentoFinanceiroController(LancamentoFinanceiroRepository repository) {
+    public LancamentoFinanceiroController(
+            LancamentoFinanceiroRepository repository,
+            MembroRepository membroRepository
+    ) {
         this.repository = repository;
+        this.membroRepository = membroRepository;
     }
 
     @PostMapping
@@ -135,6 +143,22 @@ public class LancamentoFinanceiroController {
         return buscarPendentesVencidos();
     }
 
+    @GetMapping("/mensalidades/membros")
+    public List<ResumoMensalidadeMembroResponse> listarMensalidadesPorMembro(
+            @RequestParam(required = false) Integer ano,
+            @RequestParam(required = false) Integer mes
+    ) {
+        LocalDate referencia = LocalDate.now();
+        int anoConsulta = ano != null ? ano : referencia.getYear();
+        int mesConsulta = mes != null ? mes : referencia.getMonthValue();
+        LocalDate inicio = LocalDate.of(anoConsulta, mesConsulta, 1);
+        LocalDate fim = inicio.withDayOfMonth(inicio.lengthOfMonth());
+
+        return membroRepository.findAll().stream()
+                .map(membro -> montarResumoMensalidade(membro, inicio, fim))
+                .toList();
+    }
+
     private LancamentoFinanceiro buscarLancamento(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Lançamento não encontrado"));
@@ -145,5 +169,66 @@ public class LancamentoFinanceiroController {
                 LocalDate.now(),
                 StatusPagamento.PENDENTE
         );
+    }
+
+    private ResumoMensalidadeMembroResponse montarResumoMensalidade(
+            Membro membro,
+            LocalDate inicio,
+            LocalDate fim
+    ) {
+        LancamentoFinanceiro mensalidade = repository
+                .findByMembroIdAndCategoriaAndDataLancamentoBetween(
+                        membro.getId(),
+                        CategoriaFinanceira.MENSALIDADE,
+                        inicio,
+                        fim
+                )
+                .stream()
+                .findFirst()
+                .orElse(null);
+
+        if (mensalidade == null) {
+            return new ResumoMensalidadeMembroResponse(
+                    membro.getId(),
+                    membro.getNome(),
+                    membro.getTelefone(),
+                    membro.getEmail(),
+                    membro.getStatus() != null ? membro.getStatus().name() : "SEM_STATUS",
+                    "SEM_MENSALIDADE",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        return new ResumoMensalidadeMembroResponse(
+                membro.getId(),
+                membro.getNome(),
+                membro.getTelefone(),
+                membro.getEmail(),
+                membro.getStatus() != null ? membro.getStatus().name() : "SEM_STATUS",
+                definirStatusMensalidade(mensalidade),
+                mensalidade.getId(),
+                mensalidade.getValor(),
+                mensalidade.getDataVencimento(),
+                mensalidade.getDataPagamento(),
+                mensalidade.getStatus()
+        );
+    }
+
+    private String definirStatusMensalidade(LancamentoFinanceiro mensalidade) {
+        if (mensalidade.getStatus() == StatusPagamento.PAGO) {
+            return "EM_DIA";
+        }
+
+        if (mensalidade.getDataVencimento() != null
+                && mensalidade.getDataVencimento().isBefore(LocalDate.now())
+                && mensalidade.getStatus() == StatusPagamento.PENDENTE) {
+            return "ATRASADA";
+        }
+
+        return mensalidade.getStatus().name();
     }
 }

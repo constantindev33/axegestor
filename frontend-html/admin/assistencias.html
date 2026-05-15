@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Assistências - AxeGestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/dashboard.css" />
+  </head>
+
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <h2>AxeGestor</h2>
+
+        <nav>
+          <a href="dashboard.html">Dashboard</a>
+          <a class="active" href="assistencias.html">Assistências</a>
+          <a href="financeiro.html">Financeiro</a>
+          <a href="estoque.html">Estoque</a>
+          <a href="membros.html">Membros</a>
+          <a href="#" id="logout">Sair</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Tratamentos</p>
+            <h1>Assistências</h1>
+          </div>
+
+          <button class="secondary-button" onclick="carregarAssistencias()">Atualizar</button>
+        </header>
+
+        <section class="card form-card">
+          <h2>Nova assistência</h2>
+
+          <div class="form-grid">
+            <label>
+              Nome
+              <input type="text" id="nome" placeholder="Nome completo" />
+            </label>
+
+            <label>
+              Entidade da consulta
+              <input type="text" id="entidade" placeholder="Entidade" />
+            </label>
+
+            <label>
+              Cidade
+              <input type="text" id="cidade" placeholder="Cidade" />
+            </label>
+
+            <label>
+              WhatsApp
+              <input type="text" id="whatsapp" placeholder="(00) 00000-0000" />
+            </label>
+
+            <label>
+              Status
+              <select id="status">
+                <option value="EM_ANDAMENTO">Em andamento</option>
+                <option value="FINALIZADO">Finalizado</option>
+                <option value="CANCELADO">Cancelado</option>
+              </select>
+            </label>
+          </div>
+
+          <label>
+            Observações
+            <textarea id="observacoes" placeholder="Observações importantes"></textarea>
+          </label>
+
+          <h3>Tratamentos</h3>
+          <div class="tratamentos">
+            <label><input type="checkbox" value="CANALIZACAO" /> Canalização</label>
+            <label><input type="checkbox" value="FUNDANGA" /> Fundanga</label>
+            <label><input type="checkbox" value="MAGIA_DIVINA" /> Magia Divina</label>
+            <label><input type="checkbox" value="DRACOMETRIA" /> Dracometria</label>
+            <label><input type="checkbox" value="REIKI" /> Reiki</label>
+            <label><input type="checkbox" value="BANHO_AGUA_NO_ORI" /> Banho Água no Ori</label>
+            <label><input type="checkbox" value="BANHO_DE_DEBURU" /> Banho de Deburu</label>
+            <label><input type="checkbox" value="PRATO_OFERENDA" /> Prato Oferenda</label>
+            <label><input type="checkbox" value="ORO" /> Orô</label>
+            <label><input type="checkbox" value="BARRA_DE_ACCESS" /> Barra de Access</label>
+          </div>
+
+          <h3>Sessões presenciais</h3>
+          <div class="sessoes-form">
+            <input type="date" id="sessao1" />
+            <input type="date" id="sessao2" />
+            <input type="date" id="sessao3" />
+            <input type="date" id="sessao4" />
+            <input type="date" id="sessao5" />
+            <input type="date" id="sessao6" />
+            <input type="date" id="sessao7" />
+          </div>
+
+          <div class="actions-row">
+            <button onclick="cadastrarAssistencia()">Salvar assistência</button>
+            <button class="secondary-button" onclick="limparFormulario()">Limpar</button>
+          </div>
+        </section>
+
+        <section class="card search-card">
+          <h2>Buscar assistência</h2>
+          <div class="search-row">
+            <input type="text" id="buscaNome" placeholder="Buscar por nome" />
+            <button onclick="buscarPorNome()">Buscar</button>
+            <button class="secondary-button" onclick="carregarAssistencias()">Mostrar todos</button>
+          </div>
+        </section>
+
+        <section id="listaAssistencias" class="cards list-cards"></section>
+      </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/assistencias.js"></script>
+  </body>
+</html>

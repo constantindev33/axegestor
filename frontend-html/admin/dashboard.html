@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard - AxeGestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/dashboard.css" />
+  </head>
+
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <h2>AxeGestor</h2>
+
+        <nav>
+          <a class="active" href="dashboard.html">Dashboard</a>
+          <a href="assistencias.html">Assistências</a>
+          <a href="financeiro.html">Financeiro</a>
+          <a href="estoque.html">Estoque</a>
+          <a href="membros.html">Membros</a>
+          <a href="#" id="logout">Sair</a>
+        </nav>
+      </aside>
+
+      <main class="content">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Visão geral</p>
+            <h1>Dashboard</h1>
+          </div>
+          <button class="secondary-button" onclick="carregarDashboard()">Atualizar</button>
+        </header>
+
+        <section class="cards dashboard-metrics">
+          <article class="card metric-card">
+            <span>Saldo financeiro</span>
+            <strong id="totalFinanceiro">R$ 0,00</strong>
+            <small id="resumoFinanceiro">Receitas e despesas cadastradas</small>
+          </article>
+
+          <article class="card metric-card">
+            <span>Mensalidades atrasadas</span>
+            <strong id="mensalidadesAtrasadas">0</strong>
+            <small id="mensalidadesResumo">Mês atual</small>
+          </article>
+
+          <article class="card metric-card">
+            <span>Assistências em andamento</span>
+            <strong id="assistenciasAndamento">0</strong>
+            <small id="totalAssistencias">0 assistências no total</small>
+          </article>
+
+          <article class="card metric-card">
+            <span>Estoque baixo</span>
+            <strong id="estoqueBaixo">0</strong>
+            <small>Materiais abaixo do mínimo</small>
+          </article>
+
+          <article class="card metric-card">
+            <span>Membros ativos</span>
+            <strong id="membrosAtivos">0</strong>
+            <small id="totalMembros">0 membros no total</small>
+          </article>
+        </section>
+
+        <section id="painelAlertas" class="alerts-panel"></section>
+
+        <section class="dashboard-grid">
+          <article class="card">
+            <div class="section-title">
+              <h2>Mensalidades críticas</h2>
+              <a href="financeiro.html">Ver financeiro</a>
+            </div>
+            <div id="listaMensalidadesCriticas" class="compact-list"></div>
+          </article>
+
+          <article class="card">
+            <div class="section-title">
+              <h2>Assistências recentes</h2>
+              <a href="assistencias.html">Ver assistências</a>
+            </div>
+            <div id="listaAssistenciasRecentes" class="compact-list"></div>
+          </article>
+
+          <article class="card">
+            <div class="section-title">
+              <h2>Estoque baixo</h2>
+              <a href="estoque.html">Ver estoque</a>
+            </div>
+            <div id="listaEstoqueBaixo" class="compact-list"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
+</html>

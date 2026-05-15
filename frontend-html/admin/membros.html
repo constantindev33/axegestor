@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Membros - AxeGestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/dashboard.css" />
+  </head>
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <h2>AxeGestor</h2>
+        <nav>
+          <a href="dashboard.html">Dashboard</a><a href="assistencias.html">Assistências</a><a href="financeiro.html">Financeiro</a><a href="estoque.html">Estoque</a><a class="active" href="membros.html">Membros</a><a href="#" id="logout">Sair</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="page-header"><div><p class="eyebrow">Casa</p><h1>Membros</h1></div><button class="secondary-button" onclick="carregarMembros()">Atualizar</button></header>
+        <section class="card form-card">
+          <h2>Novo membro</h2>
+          <div class="form-grid">
+            <label>Nome<input id="nome" type="text" placeholder="Nome completo" /></label>
+            <label>Telefone<input id="telefone" type="text" placeholder="(00) 00000-0000" /></label>
+            <label>E-mail<input id="email" type="email" placeholder="email@exemplo.com" /></label>
+            <label>Data de entrada<input id="dataEntrada" type="date" /></label>
+            <label>Função<select id="funcao"><option value="MEDIUM">Médium</option><option value="CAMBONE">Cambone</option><option value="DIRIGENTE">Dirigente</option><option value="FINANCEIRO">Financeiro</option><option value="ALMOXARIFADO">Almoxarifado</option><option value="ESTUDANTE">Estudante</option><option value="VISITANTE">Visitante</option></select></label>
+            <label>Status<select id="status"><option value="ATIVO">Ativo</option><option value="AFASTADO">Afastado</option><option value="VISITANTE">Visitante</option><option value="DESLIGADO">Desligado</option></select></label>
+          </div>
+          <div class="actions-row"><button onclick="salvarMembro()">Salvar membro</button></div>
+        </section>
+        <section id="listaMembros" class="cards list-cards"></section>
+      </main>
+    </div>
+    <script src="js/api.js"></script>
+    <script src="js/membros.js"></script>
+  </body>
+</html>

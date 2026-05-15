@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Estoque - AxeGestor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/dashboard.css" />
+  </head>
+  <body>
+    <div class="container">
+      <aside class="sidebar">
+        <h2>AxeGestor</h2>
+        <nav>
+          <a href="dashboard.html">Dashboard</a><a href="assistencias.html">Assistências</a><a href="financeiro.html">Financeiro</a><a class="active" href="estoque.html">Estoque</a><a href="membros.html">Membros</a><a href="#" id="logout">Sair</a>
+        </nav>
+      </aside>
+      <main class="content">
+        <header class="page-header"><div><p class="eyebrow">Almoxarifado</p><h1>Estoque</h1></div><button class="secondary-button" onclick="carregarMateriais()">Atualizar</button></header>
+        <section class="card form-card">
+          <h2>Novo material</h2>
+          <div class="form-grid">
+            <label>Nome<input id="nome" type="text" placeholder="Nome do material" /></label>
+            <label>Categoria<select id="categoria"><option value="VELA">Vela</option><option value="ERVA">Erva</option><option value="BEBIDA">Bebida</option><option value="DEFUMACAO">Defumação</option><option value="PEMBA">Pemba</option><option value="FUNDANGA">Fundanga</option><option value="BANHO">Banho</option><option value="COMIDA_RITUALISTICA">Comida ritualística</option><option value="LIMPEZA">Limpeza</option><option value="COZINHA">Cozinha</option><option value="PAPELARIA">Papelaria</option><option value="ROUPA">Roupa</option><option value="FERRAMENTA">Ferramenta</option><option value="OUTROS">Outros</option></select></label>
+            <label>Quantidade atual<input id="quantidadeAtual" type="number" min="0" value="0" /></label>
+            <label>Quantidade mínima<input id="quantidadeMinima" type="number" min="0" value="1" /></label>
+            <label>Unidade<input id="unidadeMedida" type="text" placeholder="un, kg, pacote..." /></label>
+            <label>Local<input id="localArmazenamento" type="text" placeholder="Armário, sala..." /></label>
+          </div>
+          <div class="actions-row"><button onclick="salvarMaterial()">Salvar material</button></div>
+        </section>
+        <section id="listaMateriais" class="cards list-cards"></section>
+      </main>
+    </div>
+    <script src="js/api.js"></script>
+    <script src="js/estoque.js"></script>
+  </body>
+</html>

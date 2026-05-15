@@ -39,6 +39,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers(
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/v3/api-docs/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -73,7 +78,13 @@ public class SecurityConfig {
 
     private List<String> parseOrigins(String allowedOrigins) {
         if (allowedOrigins == null || allowedOrigins.isBlank()) {
-            return List.of("http://localhost:3000", "http://localhost:5173");
+            return List.of(
+                    "http://localhost:3000",
+                    "http://localhost:4200",
+                    "http://localhost:5173",
+                    "http://localhost:5500",
+                    "http://127.0.0.1:5500"
+            );
         }
 
         return Arrays.stream(allowedOrigins.split(","))
