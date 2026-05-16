@@ -236,6 +236,105 @@ button:disabled {
   margin-top: 18px;
 }
 
+.search-row input {
+  flex: 1 1 260px;
+  margin-top: 0;
+}
+
+.tratamentos {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.tratamentos label {
+  align-items: center;
+  background: var(--surface-strong);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+}
+
+.tratamentos input {
+  margin: 0;
+  width: auto;
+}
+
+.sessoes-form {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.assistance-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+}
+
+.sessions-list {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.sessions-list strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.sessions-list p {
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.inline-button {
+  background: var(--surface-strong);
+  color: var(--text);
+  margin-left: 8px;
+  padding: 6px 10px;
+}
+
+.alerts-panel {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin: 22px 0;
+}
+
+.alert-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-weight: 800;
+  padding: 14px 16px;
+}
+
+.alert-card.ok {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.32);
+  color: #86efac;
+}
+
+.alert-card.warn {
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.32);
+  color: #fde68a;
+}
+
+.alert-card.danger {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.32);
+  color: #fca5a5;
+}
+
 .status-badge {
   background: rgba(214, 178, 76, 0.14);
   border: 1px solid rgba(214, 178, 76, 0.28);

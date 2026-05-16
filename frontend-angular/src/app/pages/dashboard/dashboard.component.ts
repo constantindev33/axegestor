@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { ApiService } from '../../core/api.service';
 import { Assistencia, LancamentoFinanceiro, Material, Membro, ResumoMensalidade } from '../../core/models';
@@ -6,6 +7,7 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
 
 @Component({
   selector: 'app-dashboard',
+  imports: [RouterLink],
   template: `
     <header class="page-header">
       <div>
@@ -43,9 +45,24 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </article>
     </section>
 
+    <section class="alerts-panel">
+      @if (mensalidadesAtrasadas > 0) {
+        <div class="alert-card danger">{{ mensalidadesAtrasadas }} mensalidade(s) atrasada(s)</div>
+      }
+      @if (mensalidadesSemCadastro > 0) {
+        <div class="alert-card warn">{{ mensalidadesSemCadastro }} membro(s) sem mensalidade no mês</div>
+      }
+      @if (estoqueBaixo.length > 0) {
+        <div class="alert-card warn">{{ estoqueBaixo.length }} material(is) com estoque baixo</div>
+      }
+      @if (mensalidadesAtrasadas === 0 && mensalidadesSemCadastro === 0 && estoqueBaixo.length === 0) {
+        <div class="alert-card ok">Tudo certo nos principais alertas do mês.</div>
+      }
+    </section>
+
     <section class="dashboard-grid">
       <article class="card">
-        <div class="section-title"><h2>Mensalidades críticas</h2><a href="/financeiro">Ver financeiro</a></div>
+        <div class="section-title"><h2>Mensalidades críticas</h2><a routerLink="/financeiro">Ver financeiro</a></div>
         <div class="compact-list">
           @for (item of mensalidadesCriticas; track item.membroId) {
             <div class="compact-item">
@@ -59,11 +76,11 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </article>
 
       <article class="card">
-        <div class="section-title"><h2>Assistências recentes</h2><a href="/assistencias">Ver assistências</a></div>
+        <div class="section-title"><h2>Assistências recentes</h2><a routerLink="/assistencias">Ver assistências</a></div>
         <div class="compact-list">
           @for (item of assistenciasRecentes; track item.id) {
             <div class="compact-item">
-              <div><strong>{{ item.nome }}</strong><span>{{ item.status }} | {{ item.cidade || '-' }}</span></div>
+              <div><strong>{{ item.nome }}</strong><span>{{ statusAssistencia(item.status) }} | {{ item.cidade || '-' }}</span></div>
               <small>{{ formatDate(item.dataConsulta) }}</small>
             </div>
           } @empty {
@@ -73,7 +90,7 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </article>
 
       <article class="card">
-        <div class="section-title"><h2>Estoque baixo</h2><a href="/estoque">Ver estoque</a></div>
+        <div class="section-title"><h2>Estoque baixo</h2><a routerLink="/estoque">Ver estoque</a></div>
         <div class="compact-list">
           @for (item of estoqueBaixo; track item.id) {
             <div class="compact-item">
@@ -95,11 +112,11 @@ export class DashboardComponent implements OnInit {
   membros: Membro[] = [];
   mensalidades: ResumoMensalidade[] = [];
 
+  constructor(private readonly apiService: ApiService) {}
+
   ngOnInit(): void {
     this.carregar();
   }
-
-  constructor(private readonly apiService: ApiService) {}
 
   carregar(): void {
     const hoje = new Date();
@@ -129,6 +146,10 @@ export class DashboardComponent implements OnInit {
     return this.mensalidades.filter((item) => item.statusMensalidade === 'ATRASADA').length;
   }
 
+  get mensalidadesSemCadastro(): number {
+    return this.mensalidades.filter((item) => item.statusMensalidade === 'SEM_MENSALIDADE').length;
+  }
+
   get assistenciasAndamento(): number {
     return this.assistencias.filter((item) => item.status === 'EM_ANDAMENTO').length;
   }
@@ -154,6 +175,14 @@ export class DashboardComponent implements OnInit {
       ATRASADA: 'Atrasada',
       PENDENTE: 'Pendente',
       SEM_MENSALIDADE: 'Sem mensalidade',
+      CANCELADO: 'Cancelada',
+    }[status] || status;
+  }
+
+  statusAssistencia(status: string): string {
+    return {
+      EM_ANDAMENTO: 'Em andamento',
+      FINALIZADO: 'Finalizada',
       CANCELADO: 'Cancelada',
     }[status] || status;
   }
