@@ -6,8 +6,10 @@ import com.ilefilhosdosol.axegestor.model.Assistencia;
 import com.ilefilhosdosol.axegestor.model.SessaoTratamento;
 import com.ilefilhosdosol.axegestor.repository.AssistenciaRepository;
 import com.ilefilhosdosol.axegestor.repository.SessaoTratamentoRepository;
+import com.ilefilhosdosol.axegestor.service.AuditoriaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -23,24 +25,30 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/assistencias")
+@PreAuthorize("hasAnyRole('ADMIN', 'ASSISTENCIA')")
 public class AssistenciaController {
 
     private final AssistenciaRepository assistenciaRepository;
     private final SessaoTratamentoRepository sessaoTratamentoRepository;
+    private final AuditoriaService auditoriaService;
 
     public AssistenciaController(
             AssistenciaRepository assistenciaRepository,
-            SessaoTratamentoRepository sessaoTratamentoRepository
+            SessaoTratamentoRepository sessaoTratamentoRepository,
+            AuditoriaService auditoriaService
     ) {
         this.assistenciaRepository = assistenciaRepository;
         this.sessaoTratamentoRepository = sessaoTratamentoRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Assistencia cadastrar(@RequestBody @Valid Assistencia assistencia) {
         vincularSessoes(assistencia);
-        return assistenciaRepository.save(assistencia);
+        Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
+        auditoriaService.registrar("ASSISTENCIAS", "CADASTRAR", "Assistencia", assistenciaSalva.getId(), "Cadastrou assistência " + assistenciaSalva.getNome());
+        return assistenciaSalva;
     }
 
     @GetMapping
@@ -93,7 +101,9 @@ public class AssistenciaController {
         assistencia.setSessoes(assistenciaAtualizada.getSessoes());
         vincularSessoes(assistencia);
 
-        return assistenciaRepository.save(assistencia);
+        Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
+        auditoriaService.registrar("ASSISTENCIAS", "ATUALIZAR", "Assistencia", assistenciaSalva.getId(), "Atualizou assistência " + assistenciaSalva.getNome());
+        return assistenciaSalva;
     }
 
     @DeleteMapping("/{id}")
@@ -104,6 +114,7 @@ public class AssistenciaController {
         }
 
         assistenciaRepository.deleteById(id);
+        auditoriaService.registrar("ASSISTENCIAS", "DELETAR", "Assistencia", id, "Deletou a assistência de id " + id);
     }
 
     @PutMapping("/{idAssistencia}/sessoes/{idSessao}")
@@ -121,7 +132,9 @@ public class AssistenciaController {
         sessao.setRealizada(sessaoAtualizada.getRealizada());
         sessao.setObservacoes(sessaoAtualizada.getObservacoes());
 
-        return sessaoTratamentoRepository.save(sessao);
+        SessaoTratamento sessaoSalva = sessaoTratamentoRepository.save(sessao);
+        auditoriaService.registrar("ASSISTENCIAS", "ATUALIZAR_SESSAO", "SessaoTratamento", sessaoSalva.getId(), "Atualizou sessão da assistência " + assistencia.getNome());
+        return sessaoSalva;
     }
 
     @PutMapping("/{idAssistencia}/sessoes/{idSessao}/realizar")
@@ -135,7 +148,9 @@ public class AssistenciaController {
         sessao.setAssistencia(assistencia);
         sessao.setRealizada(true);
 
-        return sessaoTratamentoRepository.save(sessao);
+        SessaoTratamento sessaoSalva = sessaoTratamentoRepository.save(sessao);
+        auditoriaService.registrar("ASSISTENCIAS", "REALIZAR_SESSAO", "SessaoTratamento", sessaoSalva.getId(), "Marcou sessão como realizada para " + assistencia.getNome());
+        return sessaoSalva;
     }
 
     @PutMapping("/{id}/finalizar")
@@ -144,7 +159,9 @@ public class AssistenciaController {
 
         assistencia.setStatus(StatusAssistencia.FINALIZADO);
 
-        return assistenciaRepository.save(assistencia);
+        Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
+        auditoriaService.registrar("ASSISTENCIAS", "FINALIZAR", "Assistencia", assistenciaSalva.getId(), "Finalizou assistência " + assistenciaSalva.getNome());
+        return assistenciaSalva;
     }
 
     @GetMapping("/historico")

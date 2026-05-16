@@ -8,8 +8,10 @@ import com.ilefilhosdosol.axegestor.model.Material;
 import com.ilefilhosdosol.axegestor.model.MovimentacaoEstoque;
 import com.ilefilhosdosol.axegestor.repository.MaterialRepository;
 import com.ilefilhosdosol.axegestor.repository.MovimentacaoEstoqueRepository;
+import com.ilefilhosdosol.axegestor.service.AuditoriaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,23 +26,29 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/almoxarifado")
+@PreAuthorize("hasAnyRole('ADMIN', 'ESTOQUE')")
 public class AlmoxarifadoController {
 
     private final MaterialRepository materialRepository;
     private final MovimentacaoEstoqueRepository movimentacaoRepository;
+    private final AuditoriaService auditoriaService;
 
     public AlmoxarifadoController(
             MaterialRepository materialRepository,
-            MovimentacaoEstoqueRepository movimentacaoRepository
+            MovimentacaoEstoqueRepository movimentacaoRepository,
+            AuditoriaService auditoriaService
     ) {
         this.materialRepository = materialRepository;
         this.movimentacaoRepository = movimentacaoRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @PostMapping("/materiais")
     @ResponseStatus(HttpStatus.CREATED)
     public Material cadastrarMaterial(@RequestBody @Valid Material material) {
-        return materialRepository.save(material);
+        Material materialSalvo = materialRepository.save(material);
+        auditoriaService.registrar("ESTOQUE", "CADASTRAR", "Material", materialSalvo.getId(), "Cadastrou material " + materialSalvo.getNome());
+        return materialSalvo;
     }
 
     @GetMapping("/materiais")
@@ -81,7 +89,9 @@ public class AlmoxarifadoController {
         movimentacao.setMaterial(material);
         movimentacao.setDataMovimentacao(LocalDate.now());
 
-        return movimentacaoRepository.save(movimentacao);
+        MovimentacaoEstoque movimentacaoSalva = movimentacaoRepository.save(movimentacao);
+        auditoriaService.registrar("ESTOQUE", "MOVIMENTAR", "MovimentacaoEstoque", movimentacaoSalva.getId(), "Registrou " + movimentacaoSalva.getTipo() + " de " + material.getNome());
+        return movimentacaoSalva;
     }
 
     @GetMapping("/movimentacoes/material/{materialId}")

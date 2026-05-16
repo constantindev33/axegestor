@@ -32,8 +32,34 @@ import { Material } from '../../core/models';
       <div class="actions-row"><button type="button" (click)="salvar()">Salvar material</button></div>
     </section>
 
+    <section class="card search-card">
+      <h2>Filtrar estoque</h2>
+      <div class="filter-grid">
+        <label>Buscar<input [(ngModel)]="filtroBusca" (ngModelChange)="paginaAtual = 1" placeholder="Nome ou local" /></label>
+        <label>Categoria
+          <select [(ngModel)]="filtroCategoria" (ngModelChange)="paginaAtual = 1">
+            <option value="">Todas</option>
+            @for (categoria of categorias; track categoria) {
+              <option [value]="categoria">{{ categoria }}</option>
+            }
+          </select>
+        </label>
+        <label>Situação
+          <select [(ngModel)]="filtroSituacao" (ngModelChange)="paginaAtual = 1">
+            <option value="">Todas</option>
+            <option value="BAIXO">Estoque baixo</option>
+            <option value="OK">Estoque ok</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
     <section class="cards list-cards">
-      @for (material of materiais; track material.id) {
+      <div class="list-toolbar">
+        <h2>Materiais</h2>
+        <span class="muted-inline">{{ materiaisFiltrados.length }} resultado(s)</span>
+      </div>
+      @for (material of materiaisPaginados; track material.id) {
         <article class="card">
           <span class="status-badge" [class.status-danger]="material.quantidadeAtual <= material.quantidadeMinima">
             {{ material.quantidadeAtual <= material.quantidadeMinima ? 'Estoque baixo' : material.categoria }}
@@ -49,12 +75,23 @@ import { Material } from '../../core/models';
         <div class="empty-state">Nenhum material encontrado.</div>
       }
     </section>
+
+    <nav class="pagination-bar" aria-label="Paginação de estoque">
+      <button type="button" class="secondary-button" (click)="paginaAnterior()" [disabled]="paginaAtual === 1">Anterior</button>
+      <span>Página {{ paginaAtual }} de {{ totalPaginas }}</span>
+      <button type="button" class="secondary-button" (click)="proximaPagina()" [disabled]="paginaAtual === totalPaginas">Próxima</button>
+    </nav>
   `,
 })
 export class EstoqueComponent implements OnInit {
   materiais: Material[] = [];
   categorias = ['VELA', 'ERVA', 'BEBIDA', 'DEFUMACAO', 'PEMBA', 'FUNDANGA', 'BANHO', 'COMIDA_RITUALISTICA', 'LIMPEZA', 'COZINHA', 'PAPELARIA', 'ROUPA', 'FERRAMENTA', 'OUTROS'];
   form: Material = this.novoMaterial();
+  filtroBusca = '';
+  filtroCategoria = '';
+  filtroSituacao = '';
+  paginaAtual = 1;
+  itensPorPagina = 6;
 
   constructor(private readonly apiService: ApiService) {}
 
@@ -63,7 +100,10 @@ export class EstoqueComponent implements OnInit {
   }
 
   carregar(): void {
-    this.apiService.get<Material[]>('/almoxarifado/materiais').subscribe((dados) => (this.materiais = dados));
+    this.apiService.get<Material[]>('/almoxarifado/materiais').subscribe((dados) => {
+      this.materiais = dados;
+      this.paginaAtual = 1;
+    });
   }
 
   salvar(): void {
@@ -71,6 +111,41 @@ export class EstoqueComponent implements OnInit {
       this.form = this.novoMaterial();
       this.carregar();
     });
+  }
+
+  get materiaisFiltrados(): Material[] {
+    const busca = this.normalizar(this.filtroBusca);
+
+    return this.materiais.filter((material) => {
+      const texto = this.normalizar(`${material.nome} ${material.localArmazenamento || ''}`);
+      const estoqueBaixo = material.quantidadeAtual <= material.quantidadeMinima;
+      const bateBusca = !busca || texto.includes(busca);
+      const bateCategoria = !this.filtroCategoria || material.categoria === this.filtroCategoria;
+      const bateSituacao = !this.filtroSituacao || (this.filtroSituacao === 'BAIXO' ? estoqueBaixo : !estoqueBaixo);
+
+      return bateBusca && bateCategoria && bateSituacao;
+    });
+  }
+
+  get materiaisPaginados(): Material[] {
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
+    return this.materiaisFiltrados.slice(inicio, inicio + this.itensPorPagina);
+  }
+
+  get totalPaginas(): number {
+    return Math.max(Math.ceil(this.materiaisFiltrados.length / this.itensPorPagina), 1);
+  }
+
+  paginaAnterior(): void {
+    this.paginaAtual = Math.max(this.paginaAtual - 1, 1);
+  }
+
+  proximaPagina(): void {
+    this.paginaAtual = Math.min(this.paginaAtual + 1, this.totalPaginas);
+  }
+
+  private normalizar(valor: string): string {
+    return valor.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
 
   private novoMaterial(): Material {

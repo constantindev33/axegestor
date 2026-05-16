@@ -26,7 +26,7 @@ import { LoginResponse } from '../../core/models';
           <input type="password" [(ngModel)]="senha" autocomplete="current-password" (keydown.enter)="login()" />
         </label>
 
-        <button type="button" (click)="login()" [disabled]="carregando">
+        <button class="login-button" type="button" (click)="login()" [disabled]="carregando">
           {{ carregando ? 'Entrando...' : 'Entrar' }}
         </button>
 

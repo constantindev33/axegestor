@@ -10,7 +10,10 @@ import com.ilefilhosdosol.axegestor.repository.UsuarioRepository;
 import com.ilefilhosdosol.axegestor.service.TokenService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -37,6 +40,7 @@ public class AuthController {
 
     @PostMapping("/registrar")
     @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse registrar(@RequestBody @Valid RegistrarUsuarioRequest request) {
         if (usuarioRepository.existsByEmail(request.email())) {
             throw new BusinessException("E-mail já cadastrado");
@@ -69,5 +73,10 @@ public class AuthController {
         String token = tokenService.gerarToken(usuario);
 
         return new LoginResponse(token);
+    }
+
+    @GetMapping("/me")
+    public UsuarioResponse me(@AuthenticationPrincipal Usuario usuario) {
+        return UsuarioResponse.from(usuario);
     }
 }

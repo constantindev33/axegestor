@@ -46,6 +46,7 @@ public class Usuario implements UserDetails {
     @Enumerated(EnumType.STRING)
     private PerfilUsuario perfil;
 
+    @Builder.Default
     @Column(nullable = false)
     private Boolean ativo = true;
 

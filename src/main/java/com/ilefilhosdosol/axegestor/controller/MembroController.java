@@ -3,8 +3,10 @@ package com.ilefilhosdosol.axegestor.controller;
 import com.ilefilhosdosol.axegestor.exception.NotFoundException;
 import com.ilefilhosdosol.axegestor.model.Membro;
 import com.ilefilhosdosol.axegestor.repository.MembroRepository;
+import com.ilefilhosdosol.axegestor.service.AuditoriaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,18 +21,26 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/membros")
+@PreAuthorize("hasAnyRole('ADMIN', 'FINANCEIRO', 'ASSISTENCIA', 'ESTOQUE')")
 public class MembroController {
 
     private final MembroRepository membroRepository;
+    private final AuditoriaService auditoriaService;
 
-    public MembroController(MembroRepository membroRepository) {
+    public MembroController(
+            MembroRepository membroRepository,
+            AuditoriaService auditoriaService
+    ) {
         this.membroRepository = membroRepository;
+        this.auditoriaService = auditoriaService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Membro cadastrar(@RequestBody @Valid Membro membro) {
-        return membroRepository.save(membro);
+        Membro membroSalvo = membroRepository.save(membro);
+        auditoriaService.registrar("MEMBROS", "CADASTRAR", "Membro", membroSalvo.getId(), "Cadastrou o membro " + membroSalvo.getNome());
+        return membroSalvo;
     }
 
     @GetMapping
@@ -55,7 +65,9 @@ public class MembroController {
         membro.setStatus(membroAtualizado.getStatus());
         membro.setObservacoes(membroAtualizado.getObservacoes());
 
-        return membroRepository.save(membro);
+        Membro membroSalvo = membroRepository.save(membro);
+        auditoriaService.registrar("MEMBROS", "ATUALIZAR", "Membro", membroSalvo.getId(), "Atualizou o membro " + membroSalvo.getNome());
+        return membroSalvo;
     }
 
     @DeleteMapping("/{id}")
@@ -66,6 +78,7 @@ public class MembroController {
         }
 
         membroRepository.deleteById(id);
+        auditoriaService.registrar("MEMBROS", "DELETAR", "Membro", id, "Deletou o membro de id " + id);
     }
 
     private Membro buscarMembro(Long id) {

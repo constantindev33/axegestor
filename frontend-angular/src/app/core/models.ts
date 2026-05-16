@@ -2,6 +2,52 @@ export interface LoginResponse {
   token: string;
 }
 
+export interface Usuario {
+  id?: number;
+  nome: string;
+  email: string;
+  senha?: string;
+  perfil: string;
+  ativo: boolean;
+}
+
+export interface Auditoria {
+  id?: number;
+  criadoEm: string;
+  usuarioEmail?: string;
+  usuarioNome?: string;
+  modulo: string;
+  acao: string;
+  entidade: string;
+  entidadeId?: number;
+  descricao: string;
+}
+
+export interface ResumoPorChave {
+  chave: string;
+  quantidade: number;
+  total: number;
+}
+
+export interface RelatorioFinanceiroMensal {
+  ano: number;
+  mes: number;
+  receitas: number;
+  despesas: number;
+  saldo: number;
+  totalLancamentos: number;
+  totalPagos: number;
+  totalPendentes: number;
+  totalAtrasados: number;
+  mensalidadesEmDia: number;
+  mensalidadesAtrasadas: number;
+  mensalidadesSemCadastro: number;
+  porCategoria: ResumoPorChave[];
+  porStatus: ResumoPorChave[];
+  mensalidades: ResumoMensalidade[];
+  lancamentos: LancamentoFinanceiro[];
+}
+
 export interface Membro {
   id?: number;
   nome: string;

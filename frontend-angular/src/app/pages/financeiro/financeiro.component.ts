@@ -48,6 +48,7 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       <div class="search-row">
         <input type="month" [(ngModel)]="mesMensalidade" />
         <button type="button" (click)="carregarMensalidades()">Buscar mês</button>
+        <button type="button" class="secondary-button" (click)="exportarMensalidades()">Exportar mensalidades</button>
       </div>
       <div class="cards list-cards">
         @for (item of mensalidades; track item.membroId) {
@@ -72,8 +73,46 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </div>
     </section>
 
+    <section class="card search-card">
+      <div class="section-title">
+        <h2>Filtrar lançamentos</h2>
+        <button type="button" class="secondary-button" (click)="exportarLancamentos()">Exportar financeiro</button>
+      </div>
+      <div class="filter-grid">
+        <label>Buscar<input [(ngModel)]="filtroBusca" (ngModelChange)="paginaAtual = 1" placeholder="Descrição ou responsável" /></label>
+        <label>Tipo
+          <select [(ngModel)]="filtroTipo" (ngModelChange)="paginaAtual = 1">
+            <option value="">Todos</option>
+            <option value="RECEITA">Receita</option>
+            <option value="DESPESA">Despesa</option>
+          </select>
+        </label>
+        <label>Status
+          <select [(ngModel)]="filtroStatus" (ngModelChange)="paginaAtual = 1">
+            <option value="">Todos</option>
+            <option value="PENDENTE">Pendente</option>
+            <option value="PAGO">Pago</option>
+            <option value="ATRASADO">Atrasado</option>
+            <option value="CANCELADO">Cancelado</option>
+          </select>
+        </label>
+        <label>Categoria
+          <select [(ngModel)]="filtroCategoria" (ngModelChange)="paginaAtual = 1">
+            <option value="">Todas</option>
+            @for (categoria of categorias; track categoria) {
+              <option [value]="categoria">{{ categoria }}</option>
+            }
+          </select>
+        </label>
+      </div>
+    </section>
+
     <section class="cards list-cards">
-      @for (item of lancamentos; track item.id) {
+      <div class="list-toolbar">
+        <h2>Lançamentos</h2>
+        <span class="muted-inline">{{ lancamentosFiltrados.length }} lançamento(s)</span>
+      </div>
+      @for (item of lancamentosPaginados; track item.id) {
         <article class="card">
           <span class="status-badge">{{ item.status }}</span>
           <h3>{{ item.descricao }}</h3>
@@ -89,6 +128,12 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
         <div class="empty-state">Nenhum lançamento encontrado.</div>
       }
     </section>
+
+    <nav class="pagination-bar" aria-label="Paginação de lançamentos">
+      <button type="button" class="secondary-button" (click)="paginaAnterior()" [disabled]="paginaAtual === 1">Anterior</button>
+      <span>Página {{ paginaAtual }} de {{ totalPaginas }}</span>
+      <button type="button" class="secondary-button" (click)="proximaPagina()" [disabled]="paginaAtual === totalPaginas">Próxima</button>
+    </nav>
   `,
 })
 export class FinanceiroComponent implements OnInit {
@@ -99,6 +144,12 @@ export class FinanceiroComponent implements OnInit {
   mesMensalidade = new Date().toISOString().slice(0, 7);
   categorias = ['MENSALIDADE', 'DOACAO', 'MATERIAL_RITUALISTICO', 'ALUGUEL', 'AGUA', 'LUZ', 'INTERNET', 'LIMPEZA', 'MANUTENCAO', 'EVENTO', 'CURSO', 'OUTROS'];
   form: LancamentoFinanceiro = this.novoLancamento();
+  filtroBusca = '';
+  filtroTipo = '';
+  filtroStatus = '';
+  filtroCategoria = '';
+  paginaAtual = 1;
+  itensPorPagina = 6;
 
   constructor(private readonly apiService: ApiService) {}
 
@@ -108,7 +159,10 @@ export class FinanceiroComponent implements OnInit {
 
   carregar(): void {
     this.apiService.get<Membro[]>('/membros').subscribe((dados) => (this.membros = dados));
-    this.apiService.get<LancamentoFinanceiro[]>('/financeiro').subscribe((dados) => (this.lancamentos = dados));
+    this.apiService.get<LancamentoFinanceiro[]>('/financeiro').subscribe((dados) => {
+      this.lancamentos = dados;
+      this.paginaAtual = 1;
+    });
     this.carregarMensalidades();
   }
 
@@ -132,7 +186,73 @@ export class FinanceiroComponent implements OnInit {
   }
 
   marcarComoPago(id: number): void {
+    if (!confirm('Confirmar pagamento desta mensalidade?')) {
+      return;
+    }
+
     this.apiService.put<LancamentoFinanceiro>(`/financeiro/${id}/pagar`).subscribe(() => this.carregar());
+  }
+
+  exportarMensalidades(): void {
+    const linhas = this.mensalidades.map((item) => ({
+      membro: item.nome,
+      telefone: item.telefone || '',
+      email: item.email || '',
+      statusMembro: item.statusMembro,
+      statusMensalidade: this.statusMensalidade(item.statusMensalidade),
+      valor: item.valor || 0,
+      vencimento: item.dataVencimento || '',
+      pagamento: item.dataPagamento || '',
+    }));
+
+    this.baixarCsv(`mensalidades-${this.mesMensalidade}.csv`, linhas);
+  }
+
+  exportarLancamentos(): void {
+    const linhas = this.lancamentosFiltrados.map((item) => ({
+      descricao: item.descricao,
+      responsavel: item.responsavel || '',
+      valor: item.valor || 0,
+      dataLancamento: item.dataLancamento,
+      vencimento: item.dataVencimento || '',
+      pagamento: item.dataPagamento || '',
+      tipo: item.tipo,
+      categoria: item.categoria,
+      status: item.status,
+    }));
+
+    this.baixarCsv('financeiro.csv', linhas);
+  }
+
+  get lancamentosFiltrados(): LancamentoFinanceiro[] {
+    const busca = this.normalizar(this.filtroBusca);
+
+    return this.lancamentos.filter((item) => {
+      const texto = this.normalizar(`${item.descricao} ${item.responsavel || ''}`);
+      const bateBusca = !busca || texto.includes(busca);
+      const bateTipo = !this.filtroTipo || item.tipo === this.filtroTipo;
+      const bateStatus = !this.filtroStatus || item.status === this.filtroStatus;
+      const bateCategoria = !this.filtroCategoria || item.categoria === this.filtroCategoria;
+
+      return bateBusca && bateTipo && bateStatus && bateCategoria;
+    });
+  }
+
+  get lancamentosPaginados(): LancamentoFinanceiro[] {
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
+    return this.lancamentosFiltrados.slice(inicio, inicio + this.itensPorPagina);
+  }
+
+  get totalPaginas(): number {
+    return Math.max(Math.ceil(this.lancamentosFiltrados.length / this.itensPorPagina), 1);
+  }
+
+  paginaAnterior(): void {
+    this.paginaAtual = Math.max(this.paginaAtual - 1, 1);
+  }
+
+  proximaPagina(): void {
+    this.paginaAtual = Math.min(this.paginaAtual + 1, this.totalPaginas);
   }
 
   statusMensalidade(status: string): string {
@@ -160,5 +280,34 @@ export class FinanceiroComponent implements OnInit {
       status: 'PENDENTE',
       membro: null,
     };
+  }
+
+  private baixarCsv(nomeArquivo: string, linhas: Record<string, string | number>[]): void {
+    if (!linhas.length) {
+      alert('Não há dados para exportar.');
+      return;
+    }
+
+    const colunas = Object.keys(linhas[0]);
+    const conteudo = [
+      colunas.join(';'),
+      ...linhas.map((linha) => colunas.map((coluna) => this.formatarCelulaCsv(linha[coluna])).join(';')),
+    ].join('\n');
+
+    const blob = new Blob([conteudo], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nomeArquivo;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private formatarCelulaCsv(valor: string | number): string {
+    return `"${String(valor).replaceAll('"', '""')}"`;
+  }
+
+  private normalizar(valor: string): string {
+    return valor.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   }
 }
