@@ -9,8 +9,9 @@ Primeiro suba o backend Spring Boot na raiz do projeto:
 ```powershell
 cd C:\Users\Usuario\Desktop\repositorios\axegestor
 $env:DB_USERNAME="postgres"
-$env:DB_PASSWORD="123456"
+$env:DB_PASSWORD="sua-senha-local-do-postgres"
 $env:DB_URL="jdbc:postgresql://localhost:5432/axegestor"
+$env:JWT_SECRET="configure-um-segredo-local-com-pelo-menos-32-caracteres"
 .\mvnw.cmd spring-boot:run
 ```
 
@@ -27,11 +28,12 @@ Acesse:
 http://localhost:4200
 ```
 
-Login de teste criado anteriormente:
+Use um usuário criado no seu banco local. Se o banco estiver vazio, configure antes de subir o backend:
 
-```text
-constantin@axegestor.com
-12345678
+```powershell
+$env:ADMIN_NAME="Administrador"
+$env:ADMIN_EMAIL="admin@axegestor.local"
+$env:ADMIN_PASSWORD="troque-esta-senha-local"
 ```
 
 ## Estrutura

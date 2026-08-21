@@ -8,6 +8,7 @@ import com.ilefilhosdosol.axegestor.exception.BusinessException;
 import com.ilefilhosdosol.axegestor.model.Usuario;
 import com.ilefilhosdosol.axegestor.repository.UsuarioRepository;
 import com.ilefilhosdosol.axegestor.service.TokenService;
+import com.ilefilhosdosol.axegestor.service.UsuarioService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -27,47 +28,38 @@ public class AuthController {
     private final UsuarioRepository usuarioRepository;
     private final TokenService tokenService;
     private final PasswordEncoder passwordEncoder;
+    private final UsuarioService usuarioService;
 
     public AuthController(
             UsuarioRepository usuarioRepository,
             TokenService tokenService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            UsuarioService usuarioService
     ) {
         this.usuarioRepository = usuarioRepository;
         this.tokenService = tokenService;
         this.passwordEncoder = passwordEncoder;
+        this.usuarioService = usuarioService;
     }
 
     @PostMapping("/registrar")
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
     public UsuarioResponse registrar(@RequestBody @Valid RegistrarUsuarioRequest request) {
-        if (usuarioRepository.existsByEmail(request.email())) {
-            throw new BusinessException("E-mail já cadastrado");
-        }
-
-        Usuario usuario = Usuario.builder()
-                .nome(request.nome())
-                .email(request.email())
-                .senha(passwordEncoder.encode(request.senha()))
-                .perfil(request.perfil())
-                .ativo(true)
-                .build();
-
-        return UsuarioResponse.from(usuarioRepository.save(usuario));
+        return usuarioService.cadastrar(request);
     }
 
     @PostMapping("/login")
     public LoginResponse login(@RequestBody @Valid LoginRequest request) {
         Usuario usuario = usuarioRepository.findByEmail(request.email())
-                .orElseThrow(() -> new BusinessException("E-mail ou senha inválidos"));
+                .orElseThrow(() -> new BusinessException("E-mail ou senha invalidos"));
 
         if (!usuario.isEnabled()) {
-            throw new BusinessException("Usuário inativo");
+            throw new BusinessException("Usuario inativo");
         }
 
         if (!passwordEncoder.matches(request.senha(), usuario.getSenha())) {
-            throw new BusinessException("E-mail ou senha inválidos");
+            throw new BusinessException("E-mail ou senha invalidos");
         }
 
         String token = tokenService.gerarToken(usuario);
