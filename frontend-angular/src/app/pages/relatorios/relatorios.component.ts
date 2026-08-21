@@ -4,10 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
 import { LancamentoFinanceiro, RelatorioFinanceiroMensal, ResumoMensalidade } from '../../core/models';
 import { formatCurrency, formatDate } from '../../shared/formatters';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-relatorios',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div>
@@ -16,6 +18,13 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </div>
       <button class="secondary-button" type="button" (click)="carregar()" [disabled]="carregandoRelatorio">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregandoRelatorio || carregandoArquivo"
+      [loadingText]="carregandoArquivo ? 'Preparando arquivo para download...' : 'Carregando relatório...'"
+      [success]="mensagemSucesso"
+      [error]="mensagemErro"
+    />
 
     <section class="card search-card">
       <h2>Período do relatório</h2>
@@ -30,12 +39,6 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </div>
       @if (!relatorio && !mensagemErro && !carregandoRelatorio) {
         <p class="muted">Clique em Gerar relatório antes de baixar os arquivos.</p>
-      }
-      @if (carregandoArquivo) {
-        <p class="muted">Preparando arquivo para download...</p>
-      }
-      @if (mensagemErro) {
-        <p class="error-message">{{ mensagemErro }}</p>
       }
     </section>
 
@@ -130,6 +133,7 @@ export class RelatoriosComponent implements OnInit {
   mesReferencia = new Date().toISOString().slice(0, 7);
   relatorio: RelatorioFinanceiroMensal | null = null;
   mensagemErro = '';
+  mensagemSucesso = '';
   carregandoRelatorio = false;
   carregandoArquivo = false;
 
@@ -140,7 +144,7 @@ export class RelatoriosComponent implements OnInit {
   }
 
   carregar(): void {
-    this.mensagemErro = '';
+    this.limparMensagens();
     this.carregandoRelatorio = true;
     const [ano, mes] = this.mesReferencia.split('-');
     this.apiService.get<RelatorioFinanceiroMensal>(`/financeiro/relatorios/resumo-mensal?ano=${ano}&mes=${Number(mes)}`).subscribe({
@@ -148,10 +152,10 @@ export class RelatoriosComponent implements OnInit {
         this.relatorio = dados;
         this.carregandoRelatorio = false;
       },
-      error: () => {
+      error: (error) => {
         this.relatorio = null;
         this.carregandoRelatorio = false;
-        this.mensagemErro = 'Não consegui carregar o relatório. Confirme se o backend está ligado e atualizado.';
+        this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar o relatório. Confirme se o backend está ligado e atualizado.');
       },
     });
   }
@@ -213,7 +217,7 @@ export class RelatoriosComponent implements OnInit {
   }
 
   baixarExcel(): void {
-    this.mensagemErro = '';
+    this.limparMensagens();
     this.carregandoArquivo = true;
     const [ano, mes] = this.mesReferencia.split('-');
     this.apiService.getBlob(`/financeiro/relatorios/resumo-mensal.xlsx?ano=${ano}&mes=${Number(mes)}`)
@@ -221,16 +225,17 @@ export class RelatoriosComponent implements OnInit {
         next: (arquivo) => {
           this.baixarBlob(arquivo, `relatorio-axegestor-${this.mesReferencia}.xlsx`);
           this.carregandoArquivo = false;
+          this.mensagemSucesso = 'Excel baixado com sucesso.';
         },
-        error: () => {
+        error: (error) => {
           this.carregandoArquivo = false;
-          this.mensagemErro = 'Não consegui baixar o Excel. Reinicie o backend para carregar os novos endpoints de relatório.';
+          this.mensagemErro = friendlyHttpError(error, 'Não consegui baixar o Excel. Reinicie o backend para carregar os novos endpoints de relatório.');
         },
       });
   }
 
   baixarPdf(): void {
-    this.mensagemErro = '';
+    this.limparMensagens();
     this.carregandoArquivo = true;
     const [ano, mes] = this.mesReferencia.split('-');
     this.apiService.getBlob(`/financeiro/relatorios/resumo-mensal.pdf?ano=${ano}&mes=${Number(mes)}`)
@@ -238,10 +243,11 @@ export class RelatoriosComponent implements OnInit {
         next: (arquivo) => {
           this.baixarBlob(arquivo, `prestacao-contas-axegestor-${this.mesReferencia}.pdf`);
           this.carregandoArquivo = false;
+          this.mensagemSucesso = 'PDF baixado com sucesso.';
         },
-        error: () => {
+        error: (error) => {
           this.carregandoArquivo = false;
-          this.mensagemErro = 'Não consegui baixar o PDF. Reinicie o backend para carregar os novos endpoints de relatório.';
+          this.mensagemErro = friendlyHttpError(error, 'Não consegui baixar o PDF. Reinicie o backend para carregar os novos endpoints de relatório.');
         },
       });
   }
@@ -265,7 +271,7 @@ export class RelatoriosComponent implements OnInit {
 
   private baixarCsv(nomeArquivo: string, linhas: Record<string, string | number>[]): void {
     if (!linhas.length) {
-      alert('Não há dados para exportar.');
+      this.mensagemErro = 'Não há dados para exportar.';
       return;
     }
 
@@ -277,6 +283,7 @@ export class RelatoriosComponent implements OnInit {
 
     const blob = new Blob([`\uFEFF${conteudo}`], { type: 'text/csv;charset=utf-8;' });
     this.baixarBlob(blob, nomeArquivo);
+    this.mensagemSucesso = 'CSV gerado com sucesso.';
   }
 
   private baixarBlob(arquivo: Blob, nomeArquivo: string): void {
@@ -290,5 +297,10 @@ export class RelatoriosComponent implements OnInit {
 
   private formatarCelulaCsv(valor: string | number): string {
     return `"${String(valor).replaceAll('"', '""')}"`;
+  }
+
+  private limparMensagens(): void {
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
   }
 }

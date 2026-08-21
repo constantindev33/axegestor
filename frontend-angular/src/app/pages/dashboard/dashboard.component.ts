@@ -1,14 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { finalize, forkJoin, of } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { Assistencia, LancamentoFinanceiro, Material, Membro, ResumoMensalidade } from '../../core/models';
 import { formatCurrency, formatDate } from '../../shared/formatters';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-dashboard',
-  imports: [RouterLink],
+  imports: [RouterLink, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div>
@@ -17,6 +20,12 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
       </div>
       <button type="button" class="secondary-button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Atualizando dashboard..."
+      [error]="mensagemErro"
+    />
 
     <section class="cards dashboard-metrics">
       <article class="card metric-card">
@@ -155,6 +164,8 @@ export class DashboardComponent implements OnInit {
   estoqueBaixo: Material[] = [];
   membros: Membro[] = [];
   mensalidades: ResumoMensalidade[] = [];
+  carregando = false;
+  mensagemErro = '';
 
   constructor(
     private readonly apiService: ApiService,
@@ -166,26 +177,30 @@ export class DashboardComponent implements OnInit {
   }
 
   carregar(): void {
+    this.mensagemErro = '';
     const hoje = new Date();
     const ano = hoje.getFullYear();
     const mes = hoje.getMonth() + 1;
+    this.carregando = true;
 
-    if (this.podeVer(['ADMIN', 'ASSISTENCIA'])) {
-      this.apiService.get<Assistencia[]>('/assistencias').subscribe((dados) => (this.assistencias = dados));
-    }
-
-    if (this.podeVer(['ADMIN', 'FINANCEIRO'])) {
-      this.apiService.get<LancamentoFinanceiro[]>('/financeiro').subscribe((dados) => (this.financeiro = dados));
-      this.apiService.get<ResumoMensalidade[]>(`/financeiro/mensalidades/membros?ano=${ano}&mes=${mes}`).subscribe((dados) => (this.mensalidades = dados));
-    }
-
-    if (this.podeVer(['ADMIN', 'ESTOQUE'])) {
-      this.apiService.get<Material[]>('/almoxarifado/materiais/estoque-baixo').subscribe((dados) => (this.estoqueBaixo = dados));
-    }
-
-    if (this.podeVer(['ADMIN', 'FINANCEIRO', 'ASSISTENCIA', 'ESTOQUE'])) {
-      this.apiService.get<Membro[]>('/membros').subscribe((dados) => (this.membros = dados));
-    }
+    forkJoin({
+      assistencias: this.podeVer(['ADMIN', 'ASSISTENCIA']) ? this.apiService.get<Assistencia[]>('/assistencias') : of([]),
+      financeiro: this.podeVer(['ADMIN', 'FINANCEIRO']) ? this.apiService.get<LancamentoFinanceiro[]>('/financeiro') : of([]),
+      mensalidades: this.podeVer(['ADMIN', 'FINANCEIRO']) ? this.apiService.get<ResumoMensalidade[]>(`/financeiro/mensalidades/membros?ano=${ano}&mes=${mes}`) : of([]),
+      estoqueBaixo: this.podeVer(['ADMIN', 'ESTOQUE']) ? this.apiService.get<Material[]>('/almoxarifado/materiais/estoque-baixo') : of([]),
+      membros: this.podeVer(['ADMIN', 'FINANCEIRO', 'ASSISTENCIA', 'ESTOQUE']) ? this.apiService.get<Membro[]>('/membros') : of([]),
+    })
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: ({ assistencias, financeiro, mensalidades, estoqueBaixo, membros }) => {
+          this.assistencias = assistencias;
+          this.financeiro = financeiro;
+          this.mensalidades = mensalidades;
+          this.estoqueBaixo = estoqueBaixo;
+          this.membros = membros;
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui atualizar o dashboard.')),
+      });
   }
 
   get receitas(): number {

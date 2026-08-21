@@ -1,12 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { Auditoria } from '../../core/models';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-auditoria',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div>
@@ -15,6 +18,12 @@ import { Auditoria } from '../../core/models';
       </div>
       <button class="secondary-button" type="button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Carregando auditoria..."
+      [error]="mensagemErro"
+    />
 
     <section class="card search-card">
       <h2>Filtrar registros</h2>
@@ -80,6 +89,8 @@ export class AuditoriaComponent implements OnInit {
   moduloSelecionado = '';
   paginaAtual = 1;
   itensPorPagina = 10;
+  carregando = false;
+  mensagemErro = '';
   modulos = [
     { valor: 'USUARIOS', label: 'Usuários' },
     { valor: 'MEMBROS', label: 'Membros' },
@@ -95,11 +106,18 @@ export class AuditoriaComponent implements OnInit {
   }
 
   carregar(): void {
+    this.mensagemErro = '';
     const query = this.moduloSelecionado ? `?modulo=${this.moduloSelecionado}` : '';
-    this.apiService.get<Auditoria[]>(`/auditorias${query}`).subscribe((dados) => {
-      this.auditorias = dados;
-      this.paginaAtual = 1;
-    });
+    this.carregando = true;
+    this.apiService.get<Auditoria[]>(`/auditorias${query}`)
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => {
+          this.auditorias = dados;
+          this.paginaAtual = 1;
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar a auditoria.')),
+      });
   }
 
   get auditoriasFiltradas(): Auditoria[] {

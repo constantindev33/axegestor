@@ -1,17 +1,27 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { Material } from '../../core/models';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-estoque',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div><p class="eyebrow">Almoxarifado</p><h1>Estoque</h1></div>
       <button class="secondary-button" type="button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Carregando estoque..."
+      [success]="mensagemSucesso"
+      [error]="mensagemErro"
+    />
 
     <section class="card form-card">
       <h2>Novo material</h2>
@@ -29,7 +39,7 @@ import { Material } from '../../core/models';
         <label>Unidade<input [(ngModel)]="form.unidadeMedida" /></label>
         <label>Local<input [(ngModel)]="form.localArmazenamento" /></label>
       </div>
-      <div class="actions-row"><button type="button" (click)="salvar()">Salvar material</button></div>
+      <div class="actions-row"><button type="button" (click)="salvar()" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar material' }}</button></div>
     </section>
 
     <section class="card search-card">
@@ -92,6 +102,10 @@ export class EstoqueComponent implements OnInit {
   filtroSituacao = '';
   paginaAtual = 1;
   itensPorPagina = 6;
+  carregando = false;
+  salvando = false;
+  mensagemErro = '';
+  mensagemSucesso = '';
 
   constructor(private readonly apiService: ApiService) {}
 
@@ -99,18 +113,37 @@ export class EstoqueComponent implements OnInit {
     this.carregar();
   }
 
-  carregar(): void {
-    this.apiService.get<Material[]>('/almoxarifado/materiais').subscribe((dados) => {
-      this.materiais = dados;
-      this.paginaAtual = 1;
-    });
+  carregar(preservarMensagem = false): void {
+    if (!preservarMensagem) {
+      this.limparMensagens();
+    }
+    this.carregando = true;
+
+    this.apiService.get<Material[]>('/almoxarifado/materiais')
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => {
+          this.materiais = dados;
+          this.paginaAtual = 1;
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar o estoque.')),
+      });
   }
 
   salvar(): void {
-    this.apiService.post<Material>('/almoxarifado/materiais', this.form).subscribe(() => {
-      this.form = this.novoMaterial();
-      this.carregar();
-    });
+    this.limparMensagens();
+    this.salvando = true;
+
+    this.apiService.post<Material>('/almoxarifado/materiais', this.form)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.form = this.novoMaterial();
+          this.mensagemSucesso = 'Material salvo com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui salvar o material.')),
+      });
   }
 
   get materiaisFiltrados(): Material[] {
@@ -146,6 +179,11 @@ export class EstoqueComponent implements OnInit {
 
   private normalizar(valor: string): string {
     return valor.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private limparMensagens(): void {
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
   }
 
   private novoMaterial(): Material {

@@ -1,18 +1,28 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize, forkJoin } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { LancamentoFinanceiro, Membro, ResumoMensalidade } from '../../core/models';
 import { formatCurrency, formatDate } from '../../shared/formatters';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-financeiro',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div><p class="eyebrow">Controle financeiro</p><h1>Financeiro</h1></div>
       <button class="secondary-button" type="button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Carregando financeiro..."
+      [success]="mensagemSucesso"
+      [error]="mensagemErro"
+    />
 
     <section class="card form-card">
       <h2>Novo lançamento</h2>
@@ -40,14 +50,14 @@ import { formatCurrency, formatDate } from '../../shared/formatters';
         </label>
         <label>Status<select [(ngModel)]="form.status"><option value="PENDENTE">Pendente</option><option value="PAGO">Pago</option><option value="ATRASADO">Atrasado</option><option value="CANCELADO">Cancelado</option></select></label>
       </div>
-      <div class="actions-row"><button type="button" (click)="salvar()">Salvar lançamento</button></div>
+      <div class="actions-row"><button type="button" (click)="salvar()" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar lançamento' }}</button></div>
     </section>
 
     <section class="card search-card">
       <h2>Mensalidades dos membros</h2>
       <div class="search-row">
         <input type="month" [(ngModel)]="mesMensalidade" />
-        <button type="button" (click)="carregarMensalidades()">Buscar mês</button>
+        <button type="button" (click)="carregarMensalidades()" [disabled]="carregando">Buscar mês</button>
         <button type="button" class="secondary-button" (click)="exportarMensalidades()">Exportar mensalidades</button>
       </div>
       <div class="cards list-cards">
@@ -150,6 +160,10 @@ export class FinanceiroComponent implements OnInit {
   filtroCategoria = '';
   paginaAtual = 1;
   itensPorPagina = 6;
+  carregando = false;
+  salvando = false;
+  mensagemErro = '';
+  mensagemSucesso = '';
 
   constructor(private readonly apiService: ApiService) {}
 
@@ -157,32 +171,67 @@ export class FinanceiroComponent implements OnInit {
     this.carregar();
   }
 
-  carregar(): void {
-    this.apiService.get<Membro[]>('/membros').subscribe((dados) => (this.membros = dados));
-    this.apiService.get<LancamentoFinanceiro[]>('/financeiro').subscribe((dados) => {
-      this.lancamentos = dados;
-      this.paginaAtual = 1;
-    });
-    this.carregarMensalidades();
+  carregar(preservarMensagem = false): void {
+    if (!preservarMensagem) {
+      this.limparMensagens();
+    }
+
+    const [ano, mes] = this.mesMensalidade.split('-');
+    this.carregando = true;
+
+    forkJoin({
+      membros: this.apiService.get<Membro[]>('/membros'),
+      lancamentos: this.apiService.get<LancamentoFinanceiro[]>('/financeiro'),
+      mensalidades: this.apiService.get<ResumoMensalidade[]>(`/financeiro/mensalidades/membros?ano=${ano}&mes=${Number(mes)}`),
+    })
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: ({ membros, lancamentos, mensalidades }) => {
+          this.membros = membros;
+          this.lancamentos = lancamentos;
+          this.mensalidades = mensalidades;
+          this.paginaAtual = 1;
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar o financeiro.')),
+      });
   }
 
-  carregarMensalidades(): void {
+  carregarMensalidades(preservarMensagem = false): void {
+    if (!preservarMensagem) {
+      this.limparMensagens();
+    }
+
     const [ano, mes] = this.mesMensalidade.split('-');
-    this.apiService.get<ResumoMensalidade[]>(`/financeiro/mensalidades/membros?ano=${ano}&mes=${Number(mes)}`).subscribe((dados) => (this.mensalidades = dados));
+    this.carregando = true;
+
+    this.apiService.get<ResumoMensalidade[]>(`/financeiro/mensalidades/membros?ano=${ano}&mes=${Number(mes)}`)
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => (this.mensalidades = dados),
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar as mensalidades.')),
+      });
   }
 
   salvar(): void {
+    this.limparMensagens();
     const payload = {
       ...this.form,
       membro: this.membroId ? { id: this.membroId } : null,
       dataPagamento: this.form.status === 'PAGO' ? new Date().toISOString().split('T')[0] : null,
     };
 
-    this.apiService.post<LancamentoFinanceiro>('/financeiro', payload).subscribe(() => {
-      this.form = this.novoLancamento();
-      this.membroId = null;
-      this.carregar();
-    });
+    this.salvando = true;
+    this.apiService.post<LancamentoFinanceiro>('/financeiro', payload)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.form = this.novoLancamento();
+          this.membroId = null;
+          this.mensagemSucesso = 'Lançamento salvo com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui salvar o lançamento.')),
+      });
   }
 
   marcarComoPago(id: number): void {
@@ -190,7 +239,17 @@ export class FinanceiroComponent implements OnInit {
       return;
     }
 
-    this.apiService.put<LancamentoFinanceiro>(`/financeiro/${id}/pagar`).subscribe(() => this.carregar());
+    this.limparMensagens();
+    this.salvando = true;
+    this.apiService.put<LancamentoFinanceiro>(`/financeiro/${id}/pagar`)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso = 'Pagamento confirmado com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui confirmar o pagamento.')),
+      });
   }
 
   exportarMensalidades(): void {
@@ -284,7 +343,7 @@ export class FinanceiroComponent implements OnInit {
 
   private baixarCsv(nomeArquivo: string, linhas: Record<string, string | number>[]): void {
     if (!linhas.length) {
-      alert('Não há dados para exportar.');
+      this.mensagemErro = 'Não há dados para exportar.';
       return;
     }
 
@@ -309,5 +368,10 @@ export class FinanceiroComponent implements OnInit {
 
   private normalizar(valor: string): string {
     return valor.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private limparMensagens(): void {
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
   }
 }

@@ -1,13 +1,16 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { Assistencia, SessaoTratamento } from '../../core/models';
 import { formatDate } from '../../shared/formatters';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-assistencias',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div>
@@ -16,6 +19,13 @@ import { formatDate } from '../../shared/formatters';
       </div>
       <button class="secondary-button" type="button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Carregando assistências..."
+      [success]="mensagemSucesso"
+      [error]="mensagemErro"
+    />
 
     <section class="card form-card">
       <h2>{{ assistenciaEditandoId ? 'Editar assistência' : 'Nova assistência' }}</h2>
@@ -54,7 +64,7 @@ import { formatDate } from '../../shared/formatters';
       </div>
 
       <div class="actions-row">
-        <button type="button" (click)="salvar()">Salvar assistência</button>
+        <button type="button" (click)="salvar()" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar assistência' }}</button>
         <button type="button" class="secondary-button" (click)="limparFormulario()">Limpar</button>
       </div>
     </section>
@@ -63,7 +73,7 @@ import { formatDate } from '../../shared/formatters';
       <h2>Buscar assistência</h2>
       <div class="search-row">
         <input [(ngModel)]="buscaNome" placeholder="Buscar por nome" />
-        <button type="button" (click)="buscarPorNome()">Buscar</button>
+        <button type="button" (click)="buscarPorNome()" [disabled]="carregando">Buscar</button>
         <button type="button" class="secondary-button" (click)="carregar()">Mostrar todos</button>
       </div>
     </section>
@@ -122,6 +132,10 @@ export class AssistenciasComponent implements OnInit {
   assistenciaEditandoId: number | null = null;
   buscaNome = '';
   sessoesDatas = Array(7).fill('');
+  carregando = false;
+  salvando = false;
+  mensagemErro = '';
+  mensagemSucesso = '';
   tratamentosDisponiveis = [
     { valor: 'CANALIZACAO', label: 'Canalização' },
     { valor: 'FUNDANGA', label: 'Fundanga' },
@@ -141,11 +155,22 @@ export class AssistenciasComponent implements OnInit {
     this.carregar();
   }
 
-  carregar(): void {
-    this.apiService.get<Assistencia[]>('/assistencias').subscribe((dados) => (this.assistencias = dados));
+  carregar(preservarMensagem = false): void {
+    if (!preservarMensagem) {
+      this.limparMensagens();
+    }
+
+    this.carregando = true;
+    this.apiService.get<Assistencia[]>('/assistencias')
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => (this.assistencias = dados),
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar as assistências.')),
+      });
   }
 
   buscarPorNome(): void {
+    this.limparMensagens();
     const nome = this.buscaNome.trim();
 
     if (!nome) {
@@ -153,10 +178,17 @@ export class AssistenciasComponent implements OnInit {
       return;
     }
 
-    this.apiService.get<Assistencia[]>(`/assistencias/buscar/nome?nome=${encodeURIComponent(nome)}`).subscribe((dados) => (this.assistencias = dados));
+    this.carregando = true;
+    this.apiService.get<Assistencia[]>(`/assistencias/buscar/nome?nome=${encodeURIComponent(nome)}`)
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => (this.assistencias = dados),
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui buscar assistências.')),
+      });
   }
 
   salvar(): void {
+    this.limparMensagens();
     const payload: Assistencia = {
       ...this.form,
       dataConsulta: this.form.dataConsulta || new Date().toISOString().split('T')[0],
@@ -168,9 +200,14 @@ export class AssistenciasComponent implements OnInit {
       ? this.apiService.put<Assistencia>(`/assistencias/${this.assistenciaEditandoId}`, payload)
       : this.apiService.post<Assistencia>('/assistencias', payload);
 
-    requisicao.subscribe(() => {
-      this.limparFormulario();
-      this.carregar();
+    this.salvando = true;
+    requisicao.pipe(finalize(() => (this.salvando = false))).subscribe({
+      next: () => {
+        this.limparFormulario();
+        this.mensagemSucesso = 'Assistência salva com sucesso.';
+        this.carregar(true);
+      },
+      error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui salvar a assistência.')),
     });
   }
 
@@ -197,7 +234,17 @@ export class AssistenciasComponent implements OnInit {
       return;
     }
 
-    this.apiService.delete<void>(`/assistencias/${id}`).subscribe(() => this.carregar());
+    this.limparMensagens();
+    this.salvando = true;
+    this.apiService.delete<void>(`/assistencias/${id}`)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso = 'Assistência deletada com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui deletar a assistência.')),
+      });
   }
 
   finalizar(id: number): void {
@@ -205,11 +252,31 @@ export class AssistenciasComponent implements OnInit {
       return;
     }
 
-    this.apiService.put<Assistencia>(`/assistencias/${id}/finalizar`).subscribe(() => this.carregar());
+    this.limparMensagens();
+    this.salvando = true;
+    this.apiService.put<Assistencia>(`/assistencias/${id}/finalizar`)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso = 'Tratamento finalizado com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui finalizar o tratamento.')),
+      });
   }
 
   realizarSessao(idAssistencia: number, idSessao: number): void {
-    this.apiService.put<SessaoTratamento>(`/assistencias/${idAssistencia}/sessoes/${idSessao}/realizar`).subscribe(() => this.carregar());
+    this.limparMensagens();
+    this.salvando = true;
+    this.apiService.put<SessaoTratamento>(`/assistencias/${idAssistencia}/sessoes/${idSessao}/realizar`)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso = 'Sessão marcada como realizada.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui marcar a sessão como realizada.')),
+      });
   }
 
   tratamentoSelecionado(valor: string): boolean {
@@ -233,6 +300,11 @@ export class AssistenciasComponent implements OnInit {
     this.assistenciaEditandoId = null;
     this.form = this.novaAssistencia();
     this.sessoesDatas = Array(7).fill('');
+  }
+
+  private limparMensagens(): void {
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
   }
 
   formatDate = formatDate;

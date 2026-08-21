@@ -5,10 +5,11 @@ import { Router } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { LoginResponse } from '../../core/models';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <main class="login-shell">
       <section class="login-box">
@@ -30,9 +31,11 @@ import { LoginResponse } from '../../core/models';
           {{ carregando ? 'Entrando...' : 'Entrar' }}
         </button>
 
-        @if (erro) {
-          <p class="error-message">{{ erro }}</p>
-        }
+        <app-page-feedback
+          [loading]="carregando"
+          loadingText="Validando acesso..."
+          [error]="erro"
+        />
       </section>
     </main>
   `,

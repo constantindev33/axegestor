@@ -1,12 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { Usuario } from '../../core/models';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-usuarios',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div>
@@ -15,6 +18,13 @@ import { Usuario } from '../../core/models';
       </div>
       <button class="secondary-button" type="button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Carregando usuários..."
+      [success]="mensagemSucesso"
+      [error]="mensagemErro"
+    />
 
     <section class="card form-card">
       <h2>{{ usuarioEditandoId ? 'Editar usuário' : 'Novo usuário' }}</h2>
@@ -38,7 +48,7 @@ import { Usuario } from '../../core/models';
       </div>
 
       <div class="actions-row">
-        <button type="button" (click)="salvar()">Salvar usuário</button>
+        <button type="button" (click)="salvar()" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar usuário' }}</button>
         <button type="button" class="secondary-button" (click)="limparFormulario()">Limpar</button>
       </div>
     </section>
@@ -71,6 +81,10 @@ export class UsuariosComponent implements OnInit {
   usuarios: Usuario[] = [];
   usuarioEditandoId: number | null = null;
   form: Usuario = this.novoUsuario();
+  carregando = false;
+  salvando = false;
+  mensagemErro = '';
+  mensagemSucesso = '';
   perfis = [
     { valor: 'ADMIN', label: 'Administrador' },
     { valor: 'FINANCEIRO', label: 'Financeiro' },
@@ -85,13 +99,25 @@ export class UsuariosComponent implements OnInit {
     this.carregar();
   }
 
-  carregar(): void {
-    this.apiService.get<Usuario[]>('/usuarios').subscribe((dados) => (this.usuarios = dados));
+  carregar(preservarMensagem = false): void {
+    if (!preservarMensagem) {
+      this.limparMensagens();
+    }
+
+    this.carregando = true;
+    this.apiService.get<Usuario[]>('/usuarios')
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => (this.usuarios = dados),
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar os usuários.')),
+      });
   }
 
   salvar(): void {
+    this.limparMensagens();
+
     if (!this.form.nome || !this.form.email || (!this.usuarioEditandoId && !this.form.senha)) {
-      alert('Preencha nome, e-mail e senha.');
+      this.mensagemErro = 'Preencha nome, e-mail e senha.';
       return;
     }
 
@@ -105,9 +131,14 @@ export class UsuariosComponent implements OnInit {
       ? this.apiService.put<Usuario>(`/usuarios/${this.usuarioEditandoId}`, payload)
       : this.apiService.post<Usuario>('/usuarios', payload);
 
-    requisicao.subscribe(() => {
-      this.limparFormulario();
-      this.carregar();
+    this.salvando = true;
+    requisicao.pipe(finalize(() => (this.salvando = false))).subscribe({
+      next: () => {
+        this.limparFormulario();
+        this.mensagemSucesso = 'Usuário salvo com sucesso.';
+        this.carregar(true);
+      },
+      error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui salvar o usuário.')),
     });
   }
 
@@ -122,12 +153,27 @@ export class UsuariosComponent implements OnInit {
       return;
     }
 
-    this.apiService.delete<void>(`/usuarios/${id}`).subscribe(() => this.carregar());
+    this.limparMensagens();
+    this.salvando = true;
+    this.apiService.delete<void>(`/usuarios/${id}`)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.mensagemSucesso = 'Usuário inativado com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui inativar o usuário.')),
+      });
   }
 
   limparFormulario(): void {
     this.usuarioEditandoId = null;
     this.form = this.novoUsuario();
+  }
+
+  private limparMensagens(): void {
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
   }
 
   formatarPerfil(perfil: string): string {

@@ -1,17 +1,27 @@
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { ApiService } from '../../core/api.service';
 import { Membro } from '../../core/models';
+import { friendlyHttpError } from '../../shared/http-error';
+import { PageFeedbackComponent } from '../../shared/page-feedback.component';
 
 @Component({
   selector: 'app-membros',
-  imports: [FormsModule],
+  imports: [FormsModule, PageFeedbackComponent],
   template: `
     <header class="page-header">
       <div><p class="eyebrow">Casa</p><h1>Membros</h1></div>
       <button class="secondary-button" type="button" (click)="carregar()">Atualizar</button>
     </header>
+
+    <app-page-feedback
+      [loading]="carregando"
+      loadingText="Carregando membros..."
+      [success]="mensagemSucesso"
+      [error]="mensagemErro"
+    />
 
     <section class="card form-card">
       <h2>Novo membro</h2>
@@ -32,7 +42,7 @@ import { Membro } from '../../core/models';
           </select>
         </label>
       </div>
-      <div class="actions-row"><button type="button" (click)="salvar()">Salvar membro</button></div>
+      <div class="actions-row"><button type="button" (click)="salvar()" [disabled]="salvando">{{ salvando ? 'Salvando...' : 'Salvar membro' }}</button></div>
     </section>
 
     <section class="card search-card">
@@ -98,6 +108,10 @@ export class MembrosComponent implements OnInit {
   filtroStatus = '';
   paginaAtual = 1;
   itensPorPagina = 6;
+  carregando = false;
+  salvando = false;
+  mensagemErro = '';
+  mensagemSucesso = '';
 
   constructor(private readonly apiService: ApiService) {}
 
@@ -105,18 +119,37 @@ export class MembrosComponent implements OnInit {
     this.carregar();
   }
 
-  carregar(): void {
-    this.apiService.get<Membro[]>('/membros').subscribe((dados) => {
-      this.membros = dados;
-      this.paginaAtual = 1;
-    });
+  carregar(preservarMensagem = false): void {
+    if (!preservarMensagem) {
+      this.limparMensagens();
+    }
+    this.carregando = true;
+
+    this.apiService.get<Membro[]>('/membros')
+      .pipe(finalize(() => (this.carregando = false)))
+      .subscribe({
+        next: (dados) => {
+          this.membros = dados;
+          this.paginaAtual = 1;
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui carregar os membros.')),
+      });
   }
 
   salvar(): void {
-    this.apiService.post<Membro>('/membros', this.form).subscribe(() => {
-      this.form = this.novoMembro();
-      this.carregar();
-    });
+    this.limparMensagens();
+    this.salvando = true;
+
+    this.apiService.post<Membro>('/membros', this.form)
+      .pipe(finalize(() => (this.salvando = false)))
+      .subscribe({
+        next: () => {
+          this.form = this.novoMembro();
+          this.mensagemSucesso = 'Membro salvo com sucesso.';
+          this.carregar(true);
+        },
+        error: (error) => (this.mensagemErro = friendlyHttpError(error, 'Não consegui salvar o membro.')),
+      });
   }
 
   get membrosFiltrados(): Membro[] {
@@ -151,6 +184,11 @@ export class MembrosComponent implements OnInit {
 
   private normalizar(valor: string): string {
     return valor.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  private limparMensagens(): void {
+    this.mensagemErro = '';
+    this.mensagemSucesso = '';
   }
 
   private novoMembro(): Membro {
