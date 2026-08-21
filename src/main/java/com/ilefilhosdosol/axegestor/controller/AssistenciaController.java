@@ -1,12 +1,9 @@
 package com.ilefilhosdosol.axegestor.controller;
 
 import com.ilefilhosdosol.axegestor.enums.StatusAssistencia;
-import com.ilefilhosdosol.axegestor.exception.NotFoundException;
 import com.ilefilhosdosol.axegestor.model.Assistencia;
 import com.ilefilhosdosol.axegestor.model.SessaoTratamento;
-import com.ilefilhosdosol.axegestor.repository.AssistenciaRepository;
-import com.ilefilhosdosol.axegestor.repository.SessaoTratamentoRepository;
-import com.ilefilhosdosol.axegestor.service.AuditoriaService;
+import com.ilefilhosdosol.axegestor.service.AssistenciaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,93 +25,62 @@ import java.util.List;
 @PreAuthorize("hasAnyRole('ADMIN', 'ASSISTENCIA')")
 public class AssistenciaController {
 
-    private final AssistenciaRepository assistenciaRepository;
-    private final SessaoTratamentoRepository sessaoTratamentoRepository;
-    private final AuditoriaService auditoriaService;
+    private final AssistenciaService assistenciaService;
 
-    public AssistenciaController(
-            AssistenciaRepository assistenciaRepository,
-            SessaoTratamentoRepository sessaoTratamentoRepository,
-            AuditoriaService auditoriaService
-    ) {
-        this.assistenciaRepository = assistenciaRepository;
-        this.sessaoTratamentoRepository = sessaoTratamentoRepository;
-        this.auditoriaService = auditoriaService;
+    public AssistenciaController(AssistenciaService assistenciaService) {
+        this.assistenciaService = assistenciaService;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Assistencia cadastrar(@RequestBody @Valid Assistencia assistencia) {
-        vincularSessoes(assistencia);
-        Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
-        auditoriaService.registrar("ASSISTENCIAS", "CADASTRAR", "Assistencia", assistenciaSalva.getId(), "Cadastrou assistência " + assistenciaSalva.getNome());
-        return assistenciaSalva;
+        return assistenciaService.cadastrar(assistencia);
     }
 
     @GetMapping
     public List<Assistencia> listar() {
-        return assistenciaRepository.findAll();
+        return assistenciaService.listar();
     }
 
     @GetMapping("/buscar/nome")
     public List<Assistencia> buscarPorNome(@RequestParam String nome) {
-        return assistenciaRepository.findByNomeContainingIgnoreCase(nome);
+        return assistenciaService.buscarPorNome(nome);
     }
 
     @GetMapping("/buscar/whatsapp")
     public List<Assistencia> buscarPorWhatsapp(@RequestParam String whatsapp) {
-        return assistenciaRepository.findByWhatsappContaining(whatsapp);
+        return assistenciaService.buscarPorWhatsapp(whatsapp);
     }
 
     @GetMapping("/buscar/cidade")
     public List<Assistencia> buscarPorCidade(@RequestParam String cidade) {
-        return assistenciaRepository.findByCidadeContainingIgnoreCase(cidade);
+        return assistenciaService.buscarPorCidade(cidade);
     }
 
     @GetMapping("/buscar/entidade")
     public List<Assistencia> buscarPorEntidade(@RequestParam String entidade) {
-        return assistenciaRepository.findByEntidadeConsultaContainingIgnoreCase(entidade);
+        return assistenciaService.buscarPorEntidade(entidade);
     }
 
     @GetMapping("/buscar/status")
     public List<Assistencia> buscarPorStatus(@RequestParam StatusAssistencia status) {
-        return assistenciaRepository.findByStatus(status);
+        return assistenciaService.buscarPorStatus(status);
     }
 
     @GetMapping("/{id}")
     public Assistencia buscarPorId(@PathVariable Long id) {
-        return buscarAssistencia(id);
+        return assistenciaService.buscarPorId(id);
     }
 
     @PutMapping("/{id}")
     public Assistencia atualizar(@PathVariable Long id, @RequestBody @Valid Assistencia assistenciaAtualizada) {
-        Assistencia assistencia = buscarAssistencia(id);
-
-        assistencia.setNome(assistenciaAtualizada.getNome());
-        assistencia.setEntidadeConsulta(assistenciaAtualizada.getEntidadeConsulta());
-        assistencia.setDataConsulta(assistenciaAtualizada.getDataConsulta());
-        assistencia.setCidade(assistenciaAtualizada.getCidade());
-        assistencia.setWhatsapp(assistenciaAtualizada.getWhatsapp());
-        assistencia.setObservacoes(assistenciaAtualizada.getObservacoes());
-        assistencia.setStatus(assistenciaAtualizada.getStatus());
-        assistencia.setTratamentos(assistenciaAtualizada.getTratamentos());
-        assistencia.setSessoes(assistenciaAtualizada.getSessoes());
-        vincularSessoes(assistencia);
-
-        Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
-        auditoriaService.registrar("ASSISTENCIAS", "ATUALIZAR", "Assistencia", assistenciaSalva.getId(), "Atualizou assistência " + assistenciaSalva.getNome());
-        return assistenciaSalva;
+        return assistenciaService.atualizar(id, assistenciaAtualizada);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletar(@PathVariable Long id) {
-        if (!assistenciaRepository.existsById(id)) {
-            throw new NotFoundException("Assistência não encontrada");
-        }
-
-        assistenciaRepository.deleteById(id);
-        auditoriaService.registrar("ASSISTENCIAS", "DELETAR", "Assistencia", id, "Deletou a assistência de id " + id);
+        assistenciaService.deletar(id);
     }
 
     @PutMapping("/{idAssistencia}/sessoes/{idSessao}")
@@ -123,18 +89,7 @@ public class AssistenciaController {
             @PathVariable Long idSessao,
             @RequestBody @Valid SessaoTratamento sessaoAtualizada
     ) {
-        Assistencia assistencia = buscarAssistencia(idAssistencia);
-        SessaoTratamento sessao = buscarSessao(idSessao);
-
-        sessao.setAssistencia(assistencia);
-        sessao.setNumeroSessao(sessaoAtualizada.getNumeroSessao());
-        sessao.setDataSessao(sessaoAtualizada.getDataSessao());
-        sessao.setRealizada(sessaoAtualizada.getRealizada());
-        sessao.setObservacoes(sessaoAtualizada.getObservacoes());
-
-        SessaoTratamento sessaoSalva = sessaoTratamentoRepository.save(sessao);
-        auditoriaService.registrar("ASSISTENCIAS", "ATUALIZAR_SESSAO", "SessaoTratamento", sessaoSalva.getId(), "Atualizou sessão da assistência " + assistencia.getNome());
-        return sessaoSalva;
+        return assistenciaService.atualizarSessao(idAssistencia, idSessao, sessaoAtualizada);
     }
 
     @PutMapping("/{idAssistencia}/sessoes/{idSessao}/realizar")
@@ -142,46 +97,16 @@ public class AssistenciaController {
             @PathVariable Long idAssistencia,
             @PathVariable Long idSessao
     ) {
-        Assistencia assistencia = buscarAssistencia(idAssistencia);
-        SessaoTratamento sessao = buscarSessao(idSessao);
-
-        sessao.setAssistencia(assistencia);
-        sessao.setRealizada(true);
-
-        SessaoTratamento sessaoSalva = sessaoTratamentoRepository.save(sessao);
-        auditoriaService.registrar("ASSISTENCIAS", "REALIZAR_SESSAO", "SessaoTratamento", sessaoSalva.getId(), "Marcou sessão como realizada para " + assistencia.getNome());
-        return sessaoSalva;
+        return assistenciaService.marcarSessaoComoRealizada(idAssistencia, idSessao);
     }
 
     @PutMapping("/{id}/finalizar")
     public Assistencia finalizarTratamento(@PathVariable Long id) {
-        Assistencia assistencia = buscarAssistencia(id);
-
-        assistencia.setStatus(StatusAssistencia.FINALIZADO);
-
-        Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
-        auditoriaService.registrar("ASSISTENCIAS", "FINALIZAR", "Assistencia", assistenciaSalva.getId(), "Finalizou assistência " + assistenciaSalva.getNome());
-        return assistenciaSalva;
+        return assistenciaService.finalizarTratamento(id);
     }
 
     @GetMapping("/historico")
     public List<Assistencia> historicoPorPessoa(@RequestParam String nome) {
-        return assistenciaRepository.findByNomeContainingIgnoreCase(nome);
-    }
-
-    private Assistencia buscarAssistencia(Long id) {
-        return assistenciaRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Assistência não encontrada"));
-    }
-
-    private SessaoTratamento buscarSessao(Long id) {
-        return sessaoTratamentoRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Sessão não encontrada"));
-    }
-
-    private void vincularSessoes(Assistencia assistencia) {
-        if (assistencia.getSessoes() != null) {
-            assistencia.getSessoes().forEach(sessao -> sessao.setAssistencia(assistencia));
-        }
+        return assistenciaService.historicoPorPessoa(nome);
     }
 }

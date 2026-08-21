@@ -12,7 +12,7 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    return !!this.getToken() && !this.isTokenExpired();
   }
 
   getPerfil(): string | null {
@@ -30,8 +30,22 @@ export class AuthService {
   }
 
   logout(): void {
-    localStorage.removeItem(this.tokenKey);
+    this.clearSession();
     this.router.navigate(['/login']);
+  }
+
+  clearSession(): void {
+    localStorage.removeItem(this.tokenKey);
+  }
+
+  private isTokenExpired(): boolean {
+    const payload = this.getTokenPayload();
+
+    if (!payload?.exp) {
+      return true;
+    }
+
+    return payload.exp * 1000 <= Date.now();
   }
 
   private getTokenPayload(): { perfil?: string; exp?: number } | null {

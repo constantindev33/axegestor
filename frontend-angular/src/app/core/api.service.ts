@@ -1,57 +1,34 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
-import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly baseUrl = 'http://localhost:8080';
+  private readonly baseUrl = environment.apiUrl;
 
-  constructor(
-    private readonly http: HttpClient,
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly http: HttpClient) {}
 
   get<T>(path: string): Observable<T> {
-    return this.http.get<T>(`${this.baseUrl}${path}`, {
-      headers: this.headers(),
-    });
+    return this.http.get<T>(`${this.baseUrl}${path}`);
   }
 
   getBlob(path: string): Observable<Blob> {
     return this.http.get(`${this.baseUrl}${path}`, {
-      headers: this.headers(),
       responseType: 'blob',
     });
   }
 
   post<T>(path: string, body: unknown): Observable<T> {
-    return this.http.post<T>(`${this.baseUrl}${path}`, body, {
-      headers: this.headers(),
-    });
+    return this.http.post<T>(`${this.baseUrl}${path}`, body);
   }
 
   put<T>(path: string, body: unknown = null): Observable<T> {
-    return this.http.put<T>(`${this.baseUrl}${path}`, body, {
-      headers: this.headers(),
-    });
+    return this.http.put<T>(`${this.baseUrl}${path}`, body);
   }
 
   delete<T>(path: string): Observable<T> {
-    return this.http.delete<T>(`${this.baseUrl}${path}`, {
-      headers: this.headers(),
-    });
-  }
-
-  private headers(): HttpHeaders {
-    const token = this.authService.getToken();
-    let headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-
-    if (token) {
-      headers = headers.set('Authorization', `Bearer ${token}`);
-    }
-
-    return headers;
+    return this.http.delete<T>(`${this.baseUrl}${path}`);
   }
 }
