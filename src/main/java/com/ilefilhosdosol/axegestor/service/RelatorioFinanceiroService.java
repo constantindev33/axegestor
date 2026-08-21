@@ -1,5 +1,6 @@
 package com.ilefilhosdosol.axegestor.service;
 
+import com.ilefilhosdosol.axegestor.dto.LancamentoFinanceiroResponse;
 import com.ilefilhosdosol.axegestor.dto.RelatorioFinanceiroMensalResponse;
 import com.ilefilhosdosol.axegestor.dto.ResumoMensalidadeMembroResponse;
 import com.ilefilhosdosol.axegestor.dto.ResumoPorChaveResponse;
@@ -23,7 +24,7 @@ public class RelatorioFinanceiroService {
     }
 
     public RelatorioFinanceiroMensalResponse montarResumoMensal(int ano, int mes) {
-        List<LancamentoFinanceiro> lancamentos = financeiroService.relatorioMensal(ano, mes);
+        List<LancamentoFinanceiro> lancamentos = financeiroService.relatorioMensalEntidades(ano, mes);
         List<ResumoMensalidadeMembroResponse> mensalidades = financeiroService.listarMensalidadesPorMembro(ano, mes);
         BigDecimal receitas = somarPorTipo(lancamentos, TipoLancamento.RECEITA);
         BigDecimal despesas = somarPorTipo(lancamentos, TipoLancamento.DESPESA);
@@ -44,7 +45,9 @@ public class RelatorioFinanceiroService {
                 agruparPorCategoria(lancamentos),
                 agruparPorStatus(lancamentos),
                 mensalidades,
-                lancamentos
+                lancamentos.stream()
+                        .map(LancamentoFinanceiroResponse::from)
+                        .toList()
         );
     }
 

@@ -3,7 +3,7 @@ package com.ilefilhosdosol.axegestor.service;
 import com.ilefilhosdosol.axegestor.dto.RelatorioFinanceiroMensalResponse;
 import com.ilefilhosdosol.axegestor.dto.ResumoMensalidadeMembroResponse;
 import com.ilefilhosdosol.axegestor.dto.ResumoPorChaveResponse;
-import com.ilefilhosdosol.axegestor.model.LancamentoFinanceiro;
+import com.ilefilhosdosol.axegestor.dto.LancamentoFinanceiroResponse;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -139,19 +139,19 @@ public class RelatorioArquivoService {
         return List.of(tipo, formatarChave(item.chave()), String.valueOf(item.quantidade()), dinheiro(item.total()));
     }
 
-    private List<List<String>> linhasLancamentos(List<LancamentoFinanceiro> lancamentos) {
+    private List<List<String>> linhasLancamentos(List<LancamentoFinanceiroResponse> lancamentos) {
         List<List<String>> linhas = new ArrayList<>();
         linhas.add(List.of("Descricao", "Responsavel", "Valor", "Data", "Vencimento", "Pagamento", "Tipo", "Categoria", "Status"));
         lancamentos.forEach(item -> linhas.add(List.of(
-                nulo(item.getDescricao()),
-                nulo(item.getResponsavel()),
-                dinheiro(item.getValor()),
-                item.getDataLancamento() != null ? item.getDataLancamento().format(DATA_BR) : "",
-                item.getDataVencimento() != null ? item.getDataVencimento().format(DATA_BR) : "",
-                item.getDataPagamento() != null ? item.getDataPagamento().format(DATA_BR) : "",
-                item.getTipo() != null ? item.getTipo().name() : "",
-                item.getCategoria() != null ? item.getCategoria().name() : "",
-                item.getStatus() != null ? item.getStatus().name() : ""
+                nulo(item.descricao()),
+                nulo(item.responsavel()),
+                dinheiro(item.valor()),
+                item.dataLancamento() != null ? item.dataLancamento().format(DATA_BR) : "",
+                item.dataVencimento() != null ? item.dataVencimento().format(DATA_BR) : "",
+                item.dataPagamento() != null ? item.dataPagamento().format(DATA_BR) : "",
+                item.tipo() != null ? item.tipo().name() : "",
+                item.categoria() != null ? item.categoria().name() : "",
+                item.status() != null ? item.status().name() : ""
         )));
         return linhas;
     }

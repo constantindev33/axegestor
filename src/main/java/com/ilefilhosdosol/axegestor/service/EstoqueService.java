@@ -1,5 +1,9 @@
 package com.ilefilhosdosol.axegestor.service;
 
+import com.ilefilhosdosol.axegestor.dto.MaterialRequest;
+import com.ilefilhosdosol.axegestor.dto.MaterialResponse;
+import com.ilefilhosdosol.axegestor.dto.MovimentacaoEstoqueRequest;
+import com.ilefilhosdosol.axegestor.dto.MovimentacaoEstoqueResponse;
 import com.ilefilhosdosol.axegestor.enums.CategoriaMaterial;
 import com.ilefilhosdosol.axegestor.enums.TipoMovimentacaoEstoque;
 import com.ilefilhosdosol.axegestor.exception.BusinessException;
@@ -32,34 +36,36 @@ public class EstoqueService {
     }
 
     @Transactional
-    public Material cadastrarMaterial(Material material) {
+    public MaterialResponse cadastrarMaterial(MaterialRequest request) {
+        Material material = montarMaterial(request);
         Material materialSalvo = materialRepository.save(material);
         auditoriaService.registrar("ESTOQUE", "CADASTRAR", "Material", materialSalvo.getId(), "Cadastrou material " + materialSalvo.getNome());
-        return materialSalvo;
+        return MaterialResponse.from(materialSalvo);
     }
 
-    public List<Material> listarMateriais() {
-        return materialRepository.findAll();
+    public List<MaterialResponse> listarMateriais() {
+        return mapearMateriais(materialRepository.findAll());
     }
 
-    public List<Material> buscarPorNome(String nome) {
-        return materialRepository.findByNomeContainingIgnoreCase(nome);
+    public List<MaterialResponse> buscarPorNome(String nome) {
+        return mapearMateriais(materialRepository.findByNomeContainingIgnoreCase(nome));
     }
 
-    public List<Material> buscarPorCategoria(CategoriaMaterial categoria) {
-        return materialRepository.findByCategoria(categoria);
+    public List<MaterialResponse> buscarPorCategoria(CategoriaMaterial categoria) {
+        return mapearMateriais(materialRepository.findByCategoria(categoria));
     }
 
-    public List<Material> estoqueBaixo() {
-        return materialRepository.findByEstoqueBaixo();
+    public List<MaterialResponse> estoqueBaixo() {
+        return mapearMateriais(materialRepository.findByEstoqueBaixo());
     }
 
     @Transactional
-    public MovimentacaoEstoque registrarMovimentacao(MovimentacaoEstoque movimentacao) {
-        Long materialId = extrairMaterialId(movimentacao);
+    public MovimentacaoEstoqueResponse registrarMovimentacao(MovimentacaoEstoqueRequest request) {
+        Long materialId = extrairMaterialId(request);
         Material material = materialRepository.findById(materialId)
                 .orElseThrow(() -> new NotFoundException("Material nao encontrado"));
 
+        MovimentacaoEstoque movimentacao = montarMovimentacao(request);
         atualizarQuantidadeMaterial(material, movimentacao);
         materialRepository.save(material);
 
@@ -68,23 +74,47 @@ public class EstoqueService {
 
         MovimentacaoEstoque movimentacaoSalva = movimentacaoRepository.save(movimentacao);
         auditoriaService.registrar("ESTOQUE", "MOVIMENTAR", "MovimentacaoEstoque", movimentacaoSalva.getId(), "Registrou " + movimentacaoSalva.getTipo() + " de " + material.getNome());
-        return movimentacaoSalva;
+        return MovimentacaoEstoqueResponse.from(movimentacaoSalva);
     }
 
-    public List<MovimentacaoEstoque> listarMovimentacoesPorMaterial(Long materialId) {
+    public List<MovimentacaoEstoqueResponse> listarMovimentacoesPorMaterial(Long materialId) {
         if (!materialRepository.existsById(materialId)) {
             throw new NotFoundException("Material nao encontrado");
         }
 
-        return movimentacaoRepository.findByMaterialId(materialId);
+        return movimentacaoRepository.findByMaterialId(materialId).stream()
+                .map(MovimentacaoEstoqueResponse::from)
+                .toList();
     }
 
-    private Long extrairMaterialId(MovimentacaoEstoque movimentacao) {
-        if (movimentacao.getMaterial() == null || movimentacao.getMaterial().getId() == null) {
+    private Material montarMaterial(MaterialRequest request) {
+        return Material.builder()
+                .nome(request.nome())
+                .categoria(request.categoria())
+                .quantidadeAtual(request.quantidadeAtual())
+                .quantidadeMinima(request.quantidadeMinima())
+                .unidadeMedida(request.unidadeMedida())
+                .localArmazenamento(request.localArmazenamento())
+                .observacoes(request.observacoes())
+                .build();
+    }
+
+    private MovimentacaoEstoque montarMovimentacao(MovimentacaoEstoqueRequest request) {
+        return MovimentacaoEstoque.builder()
+                .tipo(request.tipo())
+                .quantidade(request.quantidade())
+                .responsavel(request.responsavel())
+                .motivo(request.motivo())
+                .observacoes(request.observacoes())
+                .build();
+    }
+
+    private Long extrairMaterialId(MovimentacaoEstoqueRequest request) {
+        if (request.material() == null || request.material().id() == null) {
             throw new BusinessException("Informe o id do material");
         }
 
-        return movimentacao.getMaterial().getId();
+        return request.material().id();
     }
 
     private void atualizarQuantidadeMaterial(Material material, MovimentacaoEstoque movimentacao) {
@@ -103,5 +133,11 @@ public class EstoqueService {
         }
 
         material.setQuantidadeAtual(novaQuantidade);
+    }
+
+    private List<MaterialResponse> mapearMateriais(List<Material> materiais) {
+        return materiais.stream()
+                .map(MaterialResponse::from)
+                .toList();
     }
 }

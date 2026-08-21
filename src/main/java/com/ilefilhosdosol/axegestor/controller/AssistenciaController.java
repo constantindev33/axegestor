@@ -1,8 +1,10 @@
 package com.ilefilhosdosol.axegestor.controller;
 
+import com.ilefilhosdosol.axegestor.dto.AssistenciaRequest;
+import com.ilefilhosdosol.axegestor.dto.AssistenciaResponse;
+import com.ilefilhosdosol.axegestor.dto.SessaoTratamentoRequest;
+import com.ilefilhosdosol.axegestor.dto.SessaoTratamentoResponse;
 import com.ilefilhosdosol.axegestor.enums.StatusAssistencia;
-import com.ilefilhosdosol.axegestor.model.Assistencia;
-import com.ilefilhosdosol.axegestor.model.SessaoTratamento;
 import com.ilefilhosdosol.axegestor.service.AssistenciaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -33,47 +35,47 @@ public class AssistenciaController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Assistencia cadastrar(@RequestBody @Valid Assistencia assistencia) {
+    public AssistenciaResponse cadastrar(@RequestBody @Valid AssistenciaRequest assistencia) {
         return assistenciaService.cadastrar(assistencia);
     }
 
     @GetMapping
-    public List<Assistencia> listar() {
+    public List<AssistenciaResponse> listar() {
         return assistenciaService.listar();
     }
 
     @GetMapping("/buscar/nome")
-    public List<Assistencia> buscarPorNome(@RequestParam String nome) {
+    public List<AssistenciaResponse> buscarPorNome(@RequestParam String nome) {
         return assistenciaService.buscarPorNome(nome);
     }
 
     @GetMapping("/buscar/whatsapp")
-    public List<Assistencia> buscarPorWhatsapp(@RequestParam String whatsapp) {
+    public List<AssistenciaResponse> buscarPorWhatsapp(@RequestParam String whatsapp) {
         return assistenciaService.buscarPorWhatsapp(whatsapp);
     }
 
     @GetMapping("/buscar/cidade")
-    public List<Assistencia> buscarPorCidade(@RequestParam String cidade) {
+    public List<AssistenciaResponse> buscarPorCidade(@RequestParam String cidade) {
         return assistenciaService.buscarPorCidade(cidade);
     }
 
     @GetMapping("/buscar/entidade")
-    public List<Assistencia> buscarPorEntidade(@RequestParam String entidade) {
+    public List<AssistenciaResponse> buscarPorEntidade(@RequestParam String entidade) {
         return assistenciaService.buscarPorEntidade(entidade);
     }
 
     @GetMapping("/buscar/status")
-    public List<Assistencia> buscarPorStatus(@RequestParam StatusAssistencia status) {
+    public List<AssistenciaResponse> buscarPorStatus(@RequestParam StatusAssistencia status) {
         return assistenciaService.buscarPorStatus(status);
     }
 
     @GetMapping("/{id}")
-    public Assistencia buscarPorId(@PathVariable Long id) {
+    public AssistenciaResponse buscarPorId(@PathVariable Long id) {
         return assistenciaService.buscarPorId(id);
     }
 
     @PutMapping("/{id}")
-    public Assistencia atualizar(@PathVariable Long id, @RequestBody @Valid Assistencia assistenciaAtualizada) {
+    public AssistenciaResponse atualizar(@PathVariable Long id, @RequestBody @Valid AssistenciaRequest assistenciaAtualizada) {
         return assistenciaService.atualizar(id, assistenciaAtualizada);
     }
 
@@ -84,16 +86,16 @@ public class AssistenciaController {
     }
 
     @PutMapping("/{idAssistencia}/sessoes/{idSessao}")
-    public SessaoTratamento atualizarSessao(
+    public SessaoTratamentoResponse atualizarSessao(
             @PathVariable Long idAssistencia,
             @PathVariable Long idSessao,
-            @RequestBody @Valid SessaoTratamento sessaoAtualizada
+            @RequestBody @Valid SessaoTratamentoRequest sessaoAtualizada
     ) {
         return assistenciaService.atualizarSessao(idAssistencia, idSessao, sessaoAtualizada);
     }
 
     @PutMapping("/{idAssistencia}/sessoes/{idSessao}/realizar")
-    public SessaoTratamento marcarSessaoComoRealizada(
+    public SessaoTratamentoResponse marcarSessaoComoRealizada(
             @PathVariable Long idAssistencia,
             @PathVariable Long idSessao
     ) {
@@ -101,12 +103,12 @@ public class AssistenciaController {
     }
 
     @PutMapping("/{id}/finalizar")
-    public Assistencia finalizarTratamento(@PathVariable Long id) {
+    public AssistenciaResponse finalizarTratamento(@PathVariable Long id) {
         return assistenciaService.finalizarTratamento(id);
     }
 
     @GetMapping("/historico")
-    public List<Assistencia> historicoPorPessoa(@RequestParam String nome) {
+    public List<AssistenciaResponse> historicoPorPessoa(@RequestParam String nome) {
         return assistenciaService.historicoPorPessoa(nome);
     }
 }

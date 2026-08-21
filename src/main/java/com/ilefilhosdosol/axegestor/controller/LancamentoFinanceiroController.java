@@ -1,11 +1,12 @@
 package com.ilefilhosdosol.axegestor.controller;
 
+import com.ilefilhosdosol.axegestor.dto.LancamentoFinanceiroRequest;
+import com.ilefilhosdosol.axegestor.dto.LancamentoFinanceiroResponse;
 import com.ilefilhosdosol.axegestor.dto.RelatorioFinanceiroMensalResponse;
 import com.ilefilhosdosol.axegestor.dto.ResumoMensalidadeMembroResponse;
 import com.ilefilhosdosol.axegestor.enums.CategoriaFinanceira;
 import com.ilefilhosdosol.axegestor.enums.StatusPagamento;
 import com.ilefilhosdosol.axegestor.enums.TipoLancamento;
-import com.ilefilhosdosol.axegestor.model.LancamentoFinanceiro;
 import com.ilefilhosdosol.axegestor.service.FinanceiroService;
 import com.ilefilhosdosol.axegestor.service.RelatorioArquivoService;
 import com.ilefilhosdosol.axegestor.service.RelatorioFinanceiroService;
@@ -49,55 +50,55 @@ public class LancamentoFinanceiroController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public LancamentoFinanceiro cadastrar(@RequestBody @Valid LancamentoFinanceiro lancamento) {
+    public LancamentoFinanceiroResponse cadastrar(@RequestBody @Valid LancamentoFinanceiroRequest lancamento) {
         return financeiroService.cadastrar(lancamento);
     }
 
     @GetMapping
-    public List<LancamentoFinanceiro> listar() {
+    public List<LancamentoFinanceiroResponse> listar() {
         return financeiroService.listar();
     }
 
     @GetMapping("/{id}")
-    public LancamentoFinanceiro buscarPorId(@PathVariable Long id) {
+    public LancamentoFinanceiroResponse buscarPorId(@PathVariable Long id) {
         return financeiroService.buscarPorId(id);
     }
 
     @PutMapping("/{id}")
-    public LancamentoFinanceiro atualizar(
+    public LancamentoFinanceiroResponse atualizar(
             @PathVariable Long id,
-            @RequestBody @Valid LancamentoFinanceiro lancamentoAtualizado
+            @RequestBody @Valid LancamentoFinanceiroRequest lancamentoAtualizado
     ) {
         return financeiroService.atualizar(id, lancamentoAtualizado);
     }
 
     @PutMapping("/{id}/pagar")
-    public LancamentoFinanceiro marcarComoPago(@PathVariable Long id) {
+    public LancamentoFinanceiroResponse marcarComoPago(@PathVariable Long id) {
         return financeiroService.marcarComoPago(id);
     }
 
     @GetMapping("/status")
-    public List<LancamentoFinanceiro> buscarPorStatus(@RequestParam StatusPagamento status) {
+    public List<LancamentoFinanceiroResponse> buscarPorStatus(@RequestParam StatusPagamento status) {
         return financeiroService.buscarPorStatus(status);
     }
 
     @GetMapping("/tipo")
-    public List<LancamentoFinanceiro> buscarPorTipo(@RequestParam TipoLancamento tipo) {
+    public List<LancamentoFinanceiroResponse> buscarPorTipo(@RequestParam TipoLancamento tipo) {
         return financeiroService.buscarPorTipo(tipo);
     }
 
     @GetMapping("/responsavel")
-    public List<LancamentoFinanceiro> buscarPorResponsavel(@RequestParam String responsavel) {
+    public List<LancamentoFinanceiroResponse> buscarPorResponsavel(@RequestParam String responsavel) {
         return financeiroService.buscarPorResponsavel(responsavel);
     }
 
     @GetMapping("/categoria")
-    public List<LancamentoFinanceiro> buscarPorCategoria(@RequestParam CategoriaFinanceira categoria) {
+    public List<LancamentoFinanceiroResponse> buscarPorCategoria(@RequestParam CategoriaFinanceira categoria) {
         return financeiroService.buscarPorCategoria(categoria);
     }
 
     @GetMapping("/atrasados")
-    public List<LancamentoFinanceiro> listarAtrasados() {
+    public List<LancamentoFinanceiroResponse> listarAtrasados() {
         return financeiroService.listarAtrasados();
     }
 
@@ -108,12 +109,12 @@ public class LancamentoFinanceiroController {
     }
 
     @GetMapping("/membro/{membroId}")
-    public List<LancamentoFinanceiro> listarPorMembro(@PathVariable Long membroId) {
+    public List<LancamentoFinanceiroResponse> listarPorMembro(@PathVariable Long membroId) {
         return financeiroService.listarPorMembro(membroId);
     }
 
     @GetMapping("/relatorio-mensal")
-    public List<LancamentoFinanceiro> relatorioMensal(
+    public List<LancamentoFinanceiroResponse> relatorioMensal(
             @RequestParam int ano,
             @RequestParam int mes
     ) {
@@ -155,7 +156,7 @@ public class LancamentoFinanceiroController {
     }
 
     @GetMapping("/alertas")
-    public List<LancamentoFinanceiro> alertasFinanceiros() {
+    public List<LancamentoFinanceiroResponse> alertasFinanceiros() {
         return financeiroService.listarAtrasados();
     }
 

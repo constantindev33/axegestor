@@ -1,8 +1,10 @@
 package com.ilefilhosdosol.axegestor.controller;
 
+import com.ilefilhosdosol.axegestor.dto.MaterialRequest;
+import com.ilefilhosdosol.axegestor.dto.MaterialResponse;
+import com.ilefilhosdosol.axegestor.dto.MovimentacaoEstoqueRequest;
+import com.ilefilhosdosol.axegestor.dto.MovimentacaoEstoqueResponse;
 import com.ilefilhosdosol.axegestor.enums.CategoriaMaterial;
-import com.ilefilhosdosol.axegestor.model.Material;
-import com.ilefilhosdosol.axegestor.model.MovimentacaoEstoque;
 import com.ilefilhosdosol.axegestor.service.EstoqueService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -31,38 +33,38 @@ public class AlmoxarifadoController {
 
     @PostMapping("/materiais")
     @ResponseStatus(HttpStatus.CREATED)
-    public Material cadastrarMaterial(@RequestBody @Valid Material material) {
+    public MaterialResponse cadastrarMaterial(@RequestBody @Valid MaterialRequest material) {
         return estoqueService.cadastrarMaterial(material);
     }
 
     @GetMapping("/materiais")
-    public List<Material> listarMateriais() {
+    public List<MaterialResponse> listarMateriais() {
         return estoqueService.listarMateriais();
     }
 
     @GetMapping("/materiais/buscar")
-    public List<Material> buscarPorNome(@RequestParam String nome) {
+    public List<MaterialResponse> buscarPorNome(@RequestParam String nome) {
         return estoqueService.buscarPorNome(nome);
     }
 
     @GetMapping("/materiais/categoria")
-    public List<Material> buscarPorCategoria(@RequestParam CategoriaMaterial categoria) {
+    public List<MaterialResponse> buscarPorCategoria(@RequestParam CategoriaMaterial categoria) {
         return estoqueService.buscarPorCategoria(categoria);
     }
 
     @GetMapping("/materiais/estoque-baixo")
-    public List<Material> estoqueBaixo() {
+    public List<MaterialResponse> estoqueBaixo() {
         return estoqueService.estoqueBaixo();
     }
 
     @PostMapping("/movimentacoes")
     @ResponseStatus(HttpStatus.CREATED)
-    public MovimentacaoEstoque registrarMovimentacao(@RequestBody @Valid MovimentacaoEstoque movimentacao) {
+    public MovimentacaoEstoqueResponse registrarMovimentacao(@RequestBody @Valid MovimentacaoEstoqueRequest movimentacao) {
         return estoqueService.registrarMovimentacao(movimentacao);
     }
 
     @GetMapping("/movimentacoes/material/{materialId}")
-    public List<MovimentacaoEstoque> listarMovimentacoesPorMaterial(@PathVariable Long materialId) {
+    public List<MovimentacaoEstoqueResponse> listarMovimentacoesPorMaterial(@PathVariable Long materialId) {
         return estoqueService.listarMovimentacoesPorMaterial(materialId);
     }
 }

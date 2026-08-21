@@ -1,5 +1,6 @@
 package com.ilefilhosdosol.axegestor.service;
 
+import com.ilefilhosdosol.axegestor.dto.SessaoTratamentoRequest;
 import com.ilefilhosdosol.axegestor.enums.StatusAssistencia;
 import com.ilefilhosdosol.axegestor.exception.BusinessException;
 import com.ilefilhosdosol.axegestor.model.Assistencia;
@@ -58,11 +59,12 @@ class AssistenciaServiceTest {
                 .assistencia(outraAssistencia)
                 .build();
 
-        SessaoTratamento atualizacao = SessaoTratamento.builder()
-                .numeroSessao(2)
-                .dataSessao(LocalDate.now())
-                .realizada(true)
-                .build();
+        SessaoTratamentoRequest atualizacao = new SessaoTratamentoRequest(
+                2,
+                LocalDate.now(),
+                true,
+                null
+        );
 
         when(assistenciaRepository.findById(1L)).thenReturn(Optional.of(assistenciaDaUrl));
         when(sessaoTratamentoRepository.findById(10L)).thenReturn(Optional.of(sessao));

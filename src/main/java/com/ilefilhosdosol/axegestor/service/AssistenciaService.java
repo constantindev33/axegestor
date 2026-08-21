@@ -1,5 +1,9 @@
 package com.ilefilhosdosol.axegestor.service;
 
+import com.ilefilhosdosol.axegestor.dto.AssistenciaRequest;
+import com.ilefilhosdosol.axegestor.dto.AssistenciaResponse;
+import com.ilefilhosdosol.axegestor.dto.SessaoTratamentoRequest;
+import com.ilefilhosdosol.axegestor.dto.SessaoTratamentoResponse;
 import com.ilefilhosdosol.axegestor.enums.StatusAssistencia;
 import com.ilefilhosdosol.axegestor.exception.BusinessException;
 import com.ilefilhosdosol.axegestor.exception.NotFoundException;
@@ -30,59 +34,52 @@ public class AssistenciaService {
     }
 
     @Transactional
-    public Assistencia cadastrar(Assistencia assistencia) {
+    public AssistenciaResponse cadastrar(AssistenciaRequest request) {
+        Assistencia assistencia = montarAssistencia(request);
         vincularSessoes(assistencia);
         Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
         auditoriaService.registrar("ASSISTENCIAS", "CADASTRAR", "Assistencia", assistenciaSalva.getId(), "Cadastrou assistencia " + assistenciaSalva.getNome());
-        return assistenciaSalva;
+        return AssistenciaResponse.from(assistenciaSalva);
     }
 
-    public List<Assistencia> listar() {
-        return assistenciaRepository.findAll();
+    public List<AssistenciaResponse> listar() {
+        return mapearAssistencias(assistenciaRepository.findAll());
     }
 
-    public List<Assistencia> buscarPorNome(String nome) {
-        return assistenciaRepository.findByNomeContainingIgnoreCase(nome);
+    public List<AssistenciaResponse> buscarPorNome(String nome) {
+        return mapearAssistencias(assistenciaRepository.findByNomeContainingIgnoreCase(nome));
     }
 
-    public List<Assistencia> buscarPorWhatsapp(String whatsapp) {
-        return assistenciaRepository.findByWhatsappContaining(whatsapp);
+    public List<AssistenciaResponse> buscarPorWhatsapp(String whatsapp) {
+        return mapearAssistencias(assistenciaRepository.findByWhatsappContaining(whatsapp));
     }
 
-    public List<Assistencia> buscarPorCidade(String cidade) {
-        return assistenciaRepository.findByCidadeContainingIgnoreCase(cidade);
+    public List<AssistenciaResponse> buscarPorCidade(String cidade) {
+        return mapearAssistencias(assistenciaRepository.findByCidadeContainingIgnoreCase(cidade));
     }
 
-    public List<Assistencia> buscarPorEntidade(String entidade) {
-        return assistenciaRepository.findByEntidadeConsultaContainingIgnoreCase(entidade);
+    public List<AssistenciaResponse> buscarPorEntidade(String entidade) {
+        return mapearAssistencias(assistenciaRepository.findByEntidadeConsultaContainingIgnoreCase(entidade));
     }
 
-    public List<Assistencia> buscarPorStatus(StatusAssistencia status) {
-        return assistenciaRepository.findByStatus(status);
+    public List<AssistenciaResponse> buscarPorStatus(StatusAssistencia status) {
+        return mapearAssistencias(assistenciaRepository.findByStatus(status));
     }
 
-    public Assistencia buscarPorId(Long id) {
-        return buscarAssistencia(id);
+    public AssistenciaResponse buscarPorId(Long id) {
+        return AssistenciaResponse.from(buscarAssistencia(id));
     }
 
     @Transactional
-    public Assistencia atualizar(Long id, Assistencia assistenciaAtualizada) {
+    public AssistenciaResponse atualizar(Long id, AssistenciaRequest request) {
         Assistencia assistencia = buscarAssistencia(id);
 
-        assistencia.setNome(assistenciaAtualizada.getNome());
-        assistencia.setEntidadeConsulta(assistenciaAtualizada.getEntidadeConsulta());
-        assistencia.setDataConsulta(assistenciaAtualizada.getDataConsulta());
-        assistencia.setCidade(assistenciaAtualizada.getCidade());
-        assistencia.setWhatsapp(assistenciaAtualizada.getWhatsapp());
-        assistencia.setObservacoes(assistenciaAtualizada.getObservacoes());
-        assistencia.setStatus(assistenciaAtualizada.getStatus());
-        assistencia.setTratamentos(assistenciaAtualizada.getTratamentos());
-        assistencia.setSessoes(assistenciaAtualizada.getSessoes());
+        aplicarDados(assistencia, request);
         vincularSessoes(assistencia);
 
         Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
         auditoriaService.registrar("ASSISTENCIAS", "ATUALIZAR", "Assistencia", assistenciaSalva.getId(), "Atualizou assistencia " + assistenciaSalva.getNome());
-        return assistenciaSalva;
+        return AssistenciaResponse.from(assistenciaSalva);
     }
 
     @Transactional
@@ -96,23 +93,23 @@ public class AssistenciaService {
     }
 
     @Transactional
-    public SessaoTratamento atualizarSessao(Long idAssistencia, Long idSessao, SessaoTratamento sessaoAtualizada) {
+    public SessaoTratamentoResponse atualizarSessao(Long idAssistencia, Long idSessao, SessaoTratamentoRequest sessaoAtualizada) {
         Assistencia assistencia = buscarAssistencia(idAssistencia);
         SessaoTratamento sessao = buscarSessaoDaAssistencia(idAssistencia, idSessao);
 
         sessao.setAssistencia(assistencia);
-        sessao.setNumeroSessao(sessaoAtualizada.getNumeroSessao());
-        sessao.setDataSessao(sessaoAtualizada.getDataSessao());
-        sessao.setRealizada(sessaoAtualizada.getRealizada());
-        sessao.setObservacoes(sessaoAtualizada.getObservacoes());
+        sessao.setNumeroSessao(sessaoAtualizada.numeroSessao());
+        sessao.setDataSessao(sessaoAtualizada.dataSessao());
+        sessao.setRealizada(sessaoAtualizada.realizada());
+        sessao.setObservacoes(sessaoAtualizada.observacoes());
 
         SessaoTratamento sessaoSalva = sessaoTratamentoRepository.save(sessao);
         auditoriaService.registrar("ASSISTENCIAS", "ATUALIZAR_SESSAO", "SessaoTratamento", sessaoSalva.getId(), "Atualizou sessao da assistencia " + assistencia.getNome());
-        return sessaoSalva;
+        return SessaoTratamentoResponse.from(sessaoSalva);
     }
 
     @Transactional
-    public SessaoTratamento marcarSessaoComoRealizada(Long idAssistencia, Long idSessao) {
+    public SessaoTratamentoResponse marcarSessaoComoRealizada(Long idAssistencia, Long idSessao) {
         Assistencia assistencia = buscarAssistencia(idAssistencia);
         SessaoTratamento sessao = buscarSessaoDaAssistencia(idAssistencia, idSessao);
 
@@ -121,21 +118,21 @@ public class AssistenciaService {
 
         SessaoTratamento sessaoSalva = sessaoTratamentoRepository.save(sessao);
         auditoriaService.registrar("ASSISTENCIAS", "REALIZAR_SESSAO", "SessaoTratamento", sessaoSalva.getId(), "Marcou sessao como realizada para " + assistencia.getNome());
-        return sessaoSalva;
+        return SessaoTratamentoResponse.from(sessaoSalva);
     }
 
     @Transactional
-    public Assistencia finalizarTratamento(Long id) {
+    public AssistenciaResponse finalizarTratamento(Long id) {
         Assistencia assistencia = buscarAssistencia(id);
         assistencia.setStatus(StatusAssistencia.FINALIZADO);
 
         Assistencia assistenciaSalva = assistenciaRepository.save(assistencia);
         auditoriaService.registrar("ASSISTENCIAS", "FINALIZAR", "Assistencia", assistenciaSalva.getId(), "Finalizou assistencia " + assistenciaSalva.getNome());
-        return assistenciaSalva;
+        return AssistenciaResponse.from(assistenciaSalva);
     }
 
-    public List<Assistencia> historicoPorPessoa(String nome) {
-        return assistenciaRepository.findByNomeContainingIgnoreCase(nome);
+    public List<AssistenciaResponse> historicoPorPessoa(String nome) {
+        return mapearAssistencias(assistenciaRepository.findByNomeContainingIgnoreCase(nome));
     }
 
     private Assistencia buscarAssistencia(Long id) {
@@ -154,9 +151,48 @@ public class AssistenciaService {
         return sessao;
     }
 
+    private Assistencia montarAssistencia(AssistenciaRequest request) {
+        Assistencia assistencia = new Assistencia();
+        aplicarDados(assistencia, request);
+        return assistencia;
+    }
+
+    private void aplicarDados(Assistencia assistencia, AssistenciaRequest request) {
+        assistencia.setNome(request.nome());
+        assistencia.setEntidadeConsulta(request.entidadeConsulta());
+        assistencia.setDataConsulta(request.dataConsulta());
+        assistencia.setCidade(request.cidade());
+        assistencia.setWhatsapp(request.whatsapp());
+        assistencia.setObservacoes(request.observacoes());
+        assistencia.setStatus(request.status());
+        assistencia.setTratamentos(request.tratamentos());
+        assistencia.setSessoes(montarSessoes(request));
+    }
+
+    private List<SessaoTratamento> montarSessoes(AssistenciaRequest request) {
+        if (request.sessoes() == null) {
+            return List.of();
+        }
+
+        return request.sessoes().stream()
+                .map(sessao -> SessaoTratamento.builder()
+                        .numeroSessao(sessao.numeroSessao())
+                        .dataSessao(sessao.dataSessao())
+                        .realizada(sessao.realizada())
+                        .observacoes(sessao.observacoes())
+                        .build())
+                .toList();
+    }
+
     private void vincularSessoes(Assistencia assistencia) {
         if (assistencia.getSessoes() != null) {
             assistencia.getSessoes().forEach(sessao -> sessao.setAssistencia(assistencia));
         }
+    }
+
+    private List<AssistenciaResponse> mapearAssistencias(List<Assistencia> assistencias) {
+        return assistencias.stream()
+                .map(AssistenciaResponse::from)
+                .toList();
     }
 }

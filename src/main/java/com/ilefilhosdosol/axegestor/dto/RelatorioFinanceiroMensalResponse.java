@@ -1,7 +1,5 @@
 package com.ilefilhosdosol.axegestor.dto;
 
-import com.ilefilhosdosol.axegestor.model.LancamentoFinanceiro;
-
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -21,6 +19,6 @@ public record RelatorioFinanceiroMensalResponse(
         List<ResumoPorChaveResponse> porCategoria,
         List<ResumoPorChaveResponse> porStatus,
         List<ResumoMensalidadeMembroResponse> mensalidades,
-        List<LancamentoFinanceiro> lancamentos
+        List<LancamentoFinanceiroResponse> lancamentos
 ) {
 }

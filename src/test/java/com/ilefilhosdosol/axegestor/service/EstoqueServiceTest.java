@@ -1,10 +1,11 @@
 package com.ilefilhosdosol.axegestor.service;
 
+import com.ilefilhosdosol.axegestor.dto.MaterialReferenciaRequest;
+import com.ilefilhosdosol.axegestor.dto.MovimentacaoEstoqueRequest;
 import com.ilefilhosdosol.axegestor.enums.CategoriaMaterial;
 import com.ilefilhosdosol.axegestor.enums.TipoMovimentacaoEstoque;
 import com.ilefilhosdosol.axegestor.exception.BusinessException;
 import com.ilefilhosdosol.axegestor.model.Material;
-import com.ilefilhosdosol.axegestor.model.MovimentacaoEstoque;
 import com.ilefilhosdosol.axegestor.repository.MaterialRepository;
 import com.ilefilhosdosol.axegestor.repository.MovimentacaoEstoqueRepository;
 import org.junit.jupiter.api.Test;
@@ -38,11 +39,14 @@ class EstoqueServiceTest {
 
     @Test
     void deveRejeitarMovimentacaoSemMaterial() {
-        MovimentacaoEstoque movimentacao = MovimentacaoEstoque.builder()
-                .tipo(TipoMovimentacaoEstoque.SAIDA)
-                .quantidade(1)
-                .responsavel("Teste")
-                .build();
+        MovimentacaoEstoqueRequest movimentacao = new MovimentacaoEstoqueRequest(
+                null,
+                TipoMovimentacaoEstoque.SAIDA,
+                1,
+                "Teste",
+                null,
+                null
+        );
 
         assertThatThrownBy(() -> estoqueService.registrarMovimentacao(movimentacao))
                 .isInstanceOf(BusinessException.class)
@@ -63,12 +67,14 @@ class EstoqueServiceTest {
                 .unidadeMedida("un")
                 .build();
 
-        MovimentacaoEstoque movimentacao = MovimentacaoEstoque.builder()
-                .material(Material.builder().id(1L).build())
-                .tipo(TipoMovimentacaoEstoque.SAIDA)
-                .quantidade(3)
-                .responsavel("Teste")
-                .build();
+        MovimentacaoEstoqueRequest movimentacao = new MovimentacaoEstoqueRequest(
+                new MaterialReferenciaRequest(1L),
+                TipoMovimentacaoEstoque.SAIDA,
+                3,
+                "Teste",
+                null,
+                null
+        );
 
         when(materialRepository.findById(1L)).thenReturn(Optional.of(material));
 
