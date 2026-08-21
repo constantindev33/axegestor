@@ -4,6 +4,7 @@ import { authGuard, perfilGuard } from './core/auth.guard';
 import { LayoutComponent } from './layout/layout.component';
 import { AuditoriaComponent } from './pages/auditoria/auditoria.component';
 import { AssistenciasComponent } from './pages/assistencias/assistencias.component';
+import { AtendimentoComponent } from './pages/atendimento/atendimento.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
 import { EstoqueComponent } from './pages/estoque/estoque.component';
 import { FinanceiroComponent } from './pages/financeiro/financeiro.component';
@@ -21,6 +22,7 @@ export const routes: Routes = [
     children: [
       { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
       { path: 'dashboard', component: DashboardComponent },
+      { path: 'atendimento', component: AtendimentoComponent, canActivate: [perfilGuard], data: { perfis: ['ADMIN', 'ASSISTENCIA'] } },
       { path: 'assistencias', component: AssistenciasComponent, canActivate: [perfilGuard], data: { perfis: ['ADMIN', 'ASSISTENCIA'] } },
       { path: 'financeiro', component: FinanceiroComponent, canActivate: [perfilGuard], data: { perfis: ['ADMIN', 'FINANCEIRO'] } },
       { path: 'relatorios', component: RelatoriosComponent, canActivate: [perfilGuard], data: { perfis: ['ADMIN', 'FINANCEIRO'] } },

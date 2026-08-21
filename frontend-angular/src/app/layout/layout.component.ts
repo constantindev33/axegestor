@@ -13,6 +13,7 @@ import { AuthService } from '../core/auth.service';
         <nav>
           <a routerLink="/dashboard" routerLinkActive="active">Dashboard</a>
           @if (podeVer(['ADMIN', 'ASSISTENCIA'])) {
+            <a routerLink="/atendimento" routerLinkActive="active">Atendimento</a>
             <a routerLink="/assistencias" routerLinkActive="active">Assistências</a>
           }
           @if (podeVer(['ADMIN', 'FINANCEIRO'])) {
