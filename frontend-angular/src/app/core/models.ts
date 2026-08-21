@@ -115,4 +115,16 @@ export interface Material {
   quantidadeMinima: number;
   unidadeMedida: string;
   localArmazenamento?: string;
+  observacoes?: string;
+}
+
+export interface MovimentacaoEstoque {
+  id?: number;
+  material?: Material;
+  tipo: string;
+  quantidade: number;
+  dataMovimentacao?: string;
+  responsavel: string;
+  motivo?: string;
+  observacoes?: string;
 }
